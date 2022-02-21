@@ -29,16 +29,14 @@ spec:
       defaultLonghornStaticStorageClass: longhorn
     ingress:
       enabled: true
-      ingressClassName: "traefik"
+      ingressClassName: traefik
       host: longhorn.${SECRET_DOMAIN}
       path: /
       tlsSecret: longhorn.local-tls
       annotations:
-        cert-manager.io/cluster-issuer: "letsencrypt-production"
+        cert-manager.io/cluster-issuer: letsencrypt-production
         hajimari.io/enable: "true"
         hajimari.io/icon: cow
         hajimari.io/group: storage
         hajimari.io/appName: longhorn
-        traefik.ingress.kubernetes.io/router.entrypoints: "websecure"
-
-
+        traefik.ingress.kubernetes.io/router.entrypoints: websecure
