@@ -18,12 +18,13 @@ spec:
       interval: 5m
   values:
     persistence:
+      defaultClass: true
+      defaultFsType: ext4
       defaultClassReplicaCount: 2
     defaultSettings:
       defaultReplicaCount: 2
       createDefaultDiskLabeledNodes: true
       defaultDataLocality: best-effort
-      defaultDataPath: /mnt/data00
       replicaSoftAntiAffinity: false
       storageMinimalAvailablePercentage: 10
       defaultLonghornStaticStorageClass: longhorn
