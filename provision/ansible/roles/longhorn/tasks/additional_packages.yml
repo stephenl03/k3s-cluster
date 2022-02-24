@@ -1,0 +1,10 @@
+---
+- name: Install additional packages for longhorn
+  yum:
+    name: "{{ packages }}"
+  vars:
+    packages:
+    - nfs-utils
+    - iscsi-initiator-utils
+    - parted
+    - dnf-utils

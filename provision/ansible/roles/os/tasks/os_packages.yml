@@ -1,5 +1,5 @@
 ---
-- name: Upgrade all system packages
+- name: Ubuntu Upgrade all system packages
   ansible.builtin.apt:
     upgrade: full
     update_cache: true
@@ -9,8 +9,9 @@
   register: apt_upgrade
   retries: 5
   until: apt_upgrade is success
+  when: ansible_facts["distribution"] == "Ubuntu"
 
-- name: Install common packages
+- name: Ubuntu Install common packages
   ansible.builtin.apt:
     name:
       - apt-transport-https
@@ -36,11 +37,13 @@
   register: apt_install_common
   retries: 5
   until: apt_install_common is success
+  when: ansible_facts["distribution"] == "Ubuntu"
 
 - name: Check if Raspberry Pi
   command: grep -q  "Raspberry Pi" /proc/cpuinfo
   ignore_errors: true
   register: is_raspberry 
+  when: ansible_facts["distribution"] == "Ubuntu"
 
 - name: Install raspberry specific packages for Ubuntu 21 or greater
   ansible.builtin.apt:
@@ -54,9 +57,11 @@
   register: apt_install_raspberry
   retries: 5
   until: apt_install_raspberry is success
-  when: is_raspberry and (ansible_lsb.major_release|int >= 21)
-  
-- name: Copy 20auto-upgrades unattended-upgrades config
+  when:
+    - is_raspberry and (ansible_lsb.major_release|int >= 21)
+    - ansible_facts["distribution"] == "Ubuntu"
+
+- name: Ubuntu Copy 20auto-upgrades unattended-upgrades config
   ansible.builtin.blockinfile:
     path: /etc/apt/apt.conf.d/20auto-upgrades
     mode: 0644
@@ -66,8 +71,9 @@
       APT::Periodic::Download-Upgradeable-Packages "1";
       APT::Periodic::AutocleanInterval "7";
       APT::Periodic::Unattended-Upgrade "1";
+  when: ansible_facts["distribution"] == "Ubuntu"
 
-- name: Copy 50unattended-upgrades unattended-upgrades config
+- name: Ubuntu Copy 50unattended-upgrades unattended-upgrades config
   ansible.builtin.blockinfile:
     path: /etc/apt/apt.conf.d/50unattended-upgrades
     mode: 0644
@@ -80,16 +86,47 @@
           "${distro_id} ${distro_codename}-security";
           "${distro_id} ${distro_codename}-updates";
       };
+  when: ansible_facts["distribution"] == "Ubuntu"
 
-- name: Start unattended-upgrades service
+- name: Ubuntu Start unattended-upgrades service
   ansible.builtin.systemd:
     name: unattended-upgrades
     enabled: true
     state: started
+  when: ansible_facts["distribution"] == "Ubuntu"
 
-- name: Restart unattended-upgrades service
+- name: Ubuntu Restart unattended-upgrades service
   ansible.builtin.service:
     name: unattended-upgrades.service
     daemon_reload: true
     enabled: true
     state: restarted
+  when: ansible_facts["distribution"] == "Ubuntu"
+
+- name: Fedora Upgrade all system packages
+  ansible.builtin.dnf:
+    update_cache: yes
+    name: '*'
+    state: latest
+  when: ansible_facts["distribution"] == "Fedora"
+
+- name: Fedora Install common packages
+  ansible.builtin.dnf:
+    name:
+      - iptables-nft
+      - arptables-legacy
+      - ca-certificates
+      - curl
+      - ebtables-legacy
+      - iputils
+      - ipvsadm
+      - lvm2
+      - net-tools
+      - nfs-utils
+      - iscsi-initiator-utils
+      - psmisc
+      - smartmontools
+  register: dnf_install_common
+  retries: 5
+  until: dnf_install_common is success
+  when: ansible_facts["distribution"] == "Fedora"
