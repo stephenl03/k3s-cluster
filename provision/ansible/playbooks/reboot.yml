@@ -1,0 +1,12 @@
+---
+- name: Linux Reboot
+  hosts:
+    - master
+    - worker
+  gather_facts: no
+  become: true
+
+  tasks:
+    - name: Reboot the machine
+      reboot:
+        throttle: 1

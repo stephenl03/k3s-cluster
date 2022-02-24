@@ -6,7 +6,7 @@
   gather_facts: true
   any_errors_fatal: true
   tasks:
-    - name: upgrade
+    - name: Ubuntu upgrade
       ansible.builtin.apt:
         upgrade: full
         update_cache: true
@@ -16,3 +16,12 @@
       register: apt_upgrade
       retries: 5
       until: apt_upgrade is success
+      when: ansible_facts["distribution"] == "Ubuntu"
+
+    - name: Fedora upgrade
+      ansible.builtin.dnf:
+        update_cache: yes
+        name: '*'
+        state: latest
+        autoremove: yes
+      when: ansible_facts["distribution"] == "Fedora"

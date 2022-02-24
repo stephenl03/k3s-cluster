@@ -1,0 +1,38 @@
+- name: "Create partitions on devices"
+  block:
+    - name: "Read device information /dev/sda"
+      community.general.parted:
+        device: /dev/sda
+        unit: s
+      register: device_info
+
+    - name: "Add new partition /dev/sda3"
+      community.general.parted:
+        device: /dev/sda
+        number: "3"
+        part_type: primary
+        state: present
+        part_end: 100%
+        part_start: "{{ device_info.partitions[0].end + 1}}s"
+
+    - name: "Create mount path"
+      ansible.builtin.file:
+        path: /mnt/data00
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
+
+    - name: "Format the ext4 filesystem"
+      filesystem:
+        fstype: ext4
+        dev: /dev/sda3
+
+    - name: "Add /mnt/data00 entry to /etc/fstab"
+      ansible.posix.mount:
+        path: /var/lib/longhorn
+        src: UUID={{ ansible_devices.sda.partitions.sda3.uuid }}
+        fstype: ext4
+        opts: defaults
+        state: present
+      when: ansible_devices.sda.partitions.sda3 is defined

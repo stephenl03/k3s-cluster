@@ -3,7 +3,7 @@
   tags:
     - locale
 
-- include: packages.yml
+- include: os_packages.yml
   tags:
     - packages
 
