@@ -41,25 +41,27 @@ spec:
           - hosts:
               - "tv.${SECRET_DOMAIN}"
             secretName: "sonarr-tls"
-#      main:
-#        enabled: true
-#        ingressClassName: "traefik"
-#        annotations:
-#          kubernetes.io/tls-acme: "true"
-#          cert-manager.io/cluster-issuer: letsencrypt-production
-#          traefik.ingress.kubernetes.io/router.entrypoints: "websecure"
-#          traefik.ingress.kubernetes.io/router.middlewares: "network-internal-auth@kubernetescrd"
-#          external-dns/is-public: "true"
-#          external-dns.alpha.kubernetes.io/target: "ipv4.${SECRET_DOMAIN}"
-#        hosts:
-#          - host: "tv.${SECRET_DOMAIN}"
-#            paths:
-#              - path: /
-#                pathType: Prefix
-#        tls:
-#          - hosts:
-#              - "tv.${SECRET_DOMAIN}"
-#            secretName: tls.sonarr
+      # yamllint disable rule:line-length
+      # main:
+      #  enabled: true
+      #  ingressClassName: "traefik"
+      #  annotations:
+      #    kubernetes.io/tls-acme: "true"
+      #    cert-manager.io/cluster-issuer: letsencrypt-production
+      #    traefik.ingress.kubernetes.io/router.entrypoints: "websecure"
+      #    traefik.ingress.kubernetes.io/router.middlewares: "network-internal-auth@kubernetescrd"
+      #    external-dns/is-public: "true"
+      #    external-dns.alpha.kubernetes.io/target: "ipv4.${SECRET_DOMAIN}"
+      #  hosts:
+      #    - host: "tv.${SECRET_DOMAIN}"
+      #      paths:
+      #        - path: /
+      #          pathType: Prefix
+      #  tls:
+      #    - hosts:
+      #        - "tv.${SECRET_DOMAIN}"
+      #      secretName: tls.sonarr
+      # yamllint enable rule:line-length
       api:
         enabled: true
         ingressClassName: "traefik"
@@ -74,7 +76,7 @@ spec:
           - hosts:
               - "sonarr.${SECRET_DOMAIN}"
             secretName: tls.sonarr
-    #controllerLabels:
+    # controllerLabels:
     #  kasten-backup: "true"
     persistence:
       config:
