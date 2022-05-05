@@ -74,7 +74,7 @@ spec:
                 pathType: Prefix
         tls:
           - hosts:
-              - "sonarr.${SECRET_DOMAIN}"
+              - "tv.${SECRET_DOMAIN}"
             secretName: tls.sonarr
     # controllerLabels:
     #  kasten-backup: "true"
