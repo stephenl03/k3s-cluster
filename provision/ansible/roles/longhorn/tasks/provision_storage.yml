@@ -17,7 +17,7 @@
 
     - name: "Create mount path"
       ansible.builtin.file:
-        path: /mnt/data00
+        path: /var/lib/longhorn
         state: directory
         owner: root
         group: root
@@ -28,7 +28,7 @@
         fstype: ext4
         dev: /dev/sda3
 
-    - name: "Add /mnt/data00 entry to /etc/fstab"
+    - name: "Add /var/lib/longhorn entry to /etc/fstab"
       ansible.posix.mount:
         path: /var/lib/longhorn
         src: UUID={{ ansible_devices.sda.partitions.sda3.uuid }}
