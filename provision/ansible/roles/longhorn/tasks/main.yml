@@ -7,6 +7,6 @@
   tags:
     - provision_storage
 
-# - include: add_label.yml
-#   tags:
-#     - add_label
+- include: add_label.yml
+  tags:
+    - add_label

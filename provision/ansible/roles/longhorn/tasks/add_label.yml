@@ -1,10 +1,9 @@
-- name: add label to existing namespace
-  kubernetes.core.k8s:
-    state: present
-    kind: Node
-    name: ansible_hostname
-    definition:
-      metadata:
-        labels:
-          node.longhorn.io/create-default-disk: "true"
-  delegate_to: localhost
+- name: Create directory for label for nfd
+  file:
+    path: /etc/kubernetes/node-feature-discovery/features.d/
+    state: directory
+
+- name: add label for nfd
+  copy:
+    dest: /etc/kubernetes/node-feature-discovery/features.d/my-features
+    content: "longhorn-node=true"

@@ -28,6 +28,9 @@ spec:
       replicaSoftAntiAffinity: false
       storageMinimalAvailablePercentage: 10
       defaultLonghornStaticStorageClass: longhorn
+      autoDeletePodWhenVolumeDetachedUnexpectedly: false
+      defaultDataPath: /mnt/data00/
+      taintToleration: node-role.kubernetes.io/master=true:NoSchedule
     ingress:
       enabled: true
       ingressClassName: traefik

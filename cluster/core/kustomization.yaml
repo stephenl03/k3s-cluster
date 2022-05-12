@@ -6,4 +6,5 @@ resources:
   - kube-system
   - metallb-system
   - system-upgrade
-  - longhorn-system
+  - node-feature-discovery
+#  - longhorn-system
