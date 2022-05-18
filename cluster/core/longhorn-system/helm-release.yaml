@@ -23,7 +23,7 @@ spec:
       defaultClassReplicaCount: 2
     defaultSettings:
       defaultReplicaCount: 2
-      createDefaultDiskLabeledNodes: true
+      # createDefaultDiskLabeledNodes: true
       defaultDataLocality: best-effort
       replicaSoftAntiAffinity: false
       storageMinimalAvailablePercentage: 10
