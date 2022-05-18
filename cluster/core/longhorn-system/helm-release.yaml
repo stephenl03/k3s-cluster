@@ -23,16 +23,11 @@ spec:
       defaultClassReplicaCount: 2
     defaultSettings:
       defaultReplicaCount: 2
-      # createDefaultDiskLabeledNodes: true
       defaultDataLocality: best-effort
       replicaSoftAntiAffinity: false
       storageMinimalAvailablePercentage: 10
       defaultLonghornStaticStorageClass: longhorn
       autoDeletePodWhenVolumeDetachedUnexpectedly: false
-      # systemManagedComponentsNodeSelector: "feature.node.kubernetes.io/longhorn-node:true"
-      # longhornManager.nodeSelector: "feature.node.kubernetes.io/longhorn-node:true"
-      # longhornUI.nodeSelector: "feature.node.kubernetes.io/longhorn-node:true"
-      # longhornDriver.nodeSelector: "feature.node.kubernetes.io/longhorn-node:true"
     ingress:
       enabled: true
       ingressClassName: traefik
