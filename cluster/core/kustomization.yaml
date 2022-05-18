@@ -7,3 +7,4 @@ resources:
   - metallb-system
   - system-upgrade
   - node-feature-discovery
+  - longhorn-system

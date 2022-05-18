@@ -30,7 +30,10 @@ spec:
       defaultLonghornStaticStorageClass: longhorn
       autoDeletePodWhenVolumeDetachedUnexpectedly: false
       defaultDataPath: /mnt/data00/
-      taintToleration: node-role.kubernetes.io/master=true:NoSchedule
+      systemManagedComponentsNodeSelector: "feature.node.kubernetes.io/longhorn-node:true"
+      longhornManager.nodeSelector: "feature.node.kubernetes.io/longhorn-node:true"
+      longhornUI.nodeSelector: "feature.node.kubernetes.io/longhorn-node:true"
+      longhornDriver.nodeSelector: "feature.node.kubernetes.io/longhorn-node:true"
     ingress:
       enabled: true
       ingressClassName: traefik
