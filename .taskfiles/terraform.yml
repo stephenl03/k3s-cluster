@@ -7,7 +7,7 @@ tasks:
     desc: Initialize terraform
     dir: provision/terraform/cloudflare
     cmds:
-      - "terraform init"
+      - "terraform init -upgrade"
 
   plan:cloudflare:
     desc: Prepare all the k8s nodes for running k3s
