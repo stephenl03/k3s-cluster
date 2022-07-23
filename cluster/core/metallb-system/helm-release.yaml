@@ -23,6 +23,6 @@ spec:
         my-asn: 64513
       address-pools:
         - name: default
-          protocol: layer2
+          protocol: bgp
           addresses:
             - "${METALLB_LB_RANGE}"
