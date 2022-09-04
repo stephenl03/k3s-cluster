@@ -1,0 +1,10 @@
+---
+apiVersion: metallb.io/v1beta2
+kind: BGPPeer
+metadata:
+  name: pfsense
+  namespace: metallb-system
+spec:
+  myASN: 64513
+  peerASN: 64512
+  peerAddress: ${METALLB_LB_GTWY}
