@@ -4,7 +4,7 @@ resources:
   - namespaces
   - cert-manager
   - kube-system
-  # - metallb-system
+  - metallb-system
   - system-upgrade
   - node-feature-discovery
   - longhorn-system
