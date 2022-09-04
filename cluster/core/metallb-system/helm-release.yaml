@@ -15,14 +15,14 @@ spec:
         kind: HelmRepository
         name: metallb-charts
         namespace: flux-system
-  values:
-    configInline:
-      peers:
-      - peer-address: ${METALLB_LB_GTWY}
-        peer-asn: 64512
-        my-asn: 64513
-      address-pools:
-        - name: default
-          protocol: bgp
-          addresses:
-            - "${METALLB_LB_RANGE}"
+  # values:
+  #   configInline:
+  #     peers:
+  #     - peer-address: ${METALLB_LB_GTWY}
+  #       peer-asn: 64512
+  #       my-asn: 64513
+  #     address-pools:
+  #       - name: default
+  #         protocol: bgp
+  #         addresses:
+  #           - "${METALLB_LB_RANGE}"
