@@ -6,4 +6,4 @@ metadata:
   namespace: metallb-system
 spec:
   addresses:
-    - "${METALLB_LB_RANGE}"
+    - "${METALLB_LB_RANGE}" ## 172.16.50.100-172.16.50.150
