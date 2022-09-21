@@ -20,7 +20,7 @@ spec:
     controllerType: deployment
     image:
       repository: ghcr.io/k8s-at-home/sonarr
-      tag: v3.0.8.1507
+      tag: v3.0.9.1549
     env:
       TZ: "America/Chicago"
     ingress:
@@ -101,4 +101,4 @@ spec:
         memory: 350Mi
         cpu: 25m
       limits:
-        memory: 5000Mi
+        memory: 500Mi
