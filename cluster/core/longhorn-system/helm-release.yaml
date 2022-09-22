@@ -31,12 +31,12 @@ spec:
     ingress:
       enabled: true
       ingressClassName: traefik
-      host: longhorn.${SECRET_DOMAIN}
+      host: longhorn.k8s.${SECRET_DOMAIN}
       path: /
       tls: true
       tlsSecret: longhorn.local-tls
       annotations:
-        cert-manager.io/cluster-issuer: letsencrypt-production
+        cert-manager.io/cluster-issuer: letsencrypt-staging
         hajimari.io/enable: "true"
         hajimari.io/icon: cow
         hajimari.io/group: storage
