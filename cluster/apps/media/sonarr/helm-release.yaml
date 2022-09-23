@@ -68,13 +68,13 @@ spec:
         annotations:
           traefik.ingress.kubernetes.io/router.entrypoints: "websecure"
         hosts:
-          - host: "tv.${SECRET_DOMAIN}"
+          - host: "tv.k8s.${SECRET_DOMAIN}"
             paths:
               - path: /api
                 pathType: Prefix
         tls:
           - hosts:
-              - "tv.${SECRET_DOMAIN}"
+              - "tv.k8s.${SECRET_DOMAIN}"
             secretName: tls.sonarr
     # controllerLabels:
     #  kasten-backup: "true"
