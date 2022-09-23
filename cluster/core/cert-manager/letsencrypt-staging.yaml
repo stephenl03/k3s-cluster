@@ -20,3 +20,4 @@ spec:
           dnsZones:
             - ${SECRET_DOMAIN}
             - '*.${SECRET_DOMAIN}'
+            - '*.k8s.${SECRET_DOMAIN}'

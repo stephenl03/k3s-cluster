@@ -36,9 +36,9 @@ spec:
       tls: true
       tlsSecret: longhorn.local-tls
       annotations:
-        cert-manager.io/cluster-issuer: letsencrypt-staging
+        cert-manager.io/cluster-issuer: "letsencrypt-staging"
         hajimari.io/enable: "true"
-        hajimari.io/icon: cow
-        hajimari.io/group: storage
-        hajimari.io/appName: longhorn
-        traefik.ingress.kubernetes.io/router.entrypoints: websecure
+        hajimari.io/icon: "cow"
+        hajimari.io/group: "storage"
+        hajimari.io/appName: "longhorn"
+        traefik.ingress.kubernetes.io/router.entrypoints: "websecure"
