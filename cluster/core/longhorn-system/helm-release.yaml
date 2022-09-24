@@ -36,7 +36,7 @@ spec:
       tls: true
       tlsSecret: longhorn.local-tls
       annotations:
-        cert-manager.io/cluster-issuer: "letsencrypt-staging"
+        cert-manager.io/cluster-issuer: "letsencrypt-production"
         hajimari.io/enable: "true"
         hajimari.io/icon: "cow"
         hajimari.io/group: "storage"
