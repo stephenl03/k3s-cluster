@@ -112,7 +112,7 @@ spec:
                 pathType: Prefix
         tls:
           - hosts:
-              - "hajimari.${SECRET_DOMAIN}"
+              - "hajimari.k8s.${SECRET_DOMAIN}"
             secretName: "hajimari-tls"
     persistence:
       data:
