@@ -19,7 +19,7 @@ spec:
   dependsOn:
     - name: cert-manager
       namespace: cert-manager
-      name: metallb
+    - name: metallb
       namespace: metallb-system
   install:
     crds: CreateReplace
