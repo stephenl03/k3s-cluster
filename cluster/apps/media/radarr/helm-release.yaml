@@ -2,61 +2,73 @@
 apiVersion: helm.toolkit.fluxcd.io/v2beta1
 kind: HelmRelease
 metadata:
-  name: radarr
+  name: &app radarr
   namespace: media
 spec:
-  interval: 5m
+  dependsOn:
+  - name: longhorn
+    namespace: longhorn-system
+  - name: traefik
+    namespace: networking
+  interval: 15m
   chart:
     spec:
-      # renovate: registryUrl=https://k8s-at-home.com/charts/
-      chart: radarr
-      version: 16.3.2
+      chart: app-template
+      version: 0.2.2
       sourceRef:
         kind: HelmRepository
-        name: k8s-at-home-charts
+        name: bjw-s-charts
         namespace: flux-system
-      interval: 5m
+  install:
+    createNamespace: true
+    remediation:
+      retries: 5
+  upgrade:
+    remediation:
+      retries: 5
   values:
     image:
       repository: ghcr.io/onedr0p/radarr
-      tag: "4.2.4.6635"
+      tag: 4.2.4.6635
     env:
-      TZ:  "${TIMEZONE}"
+      TZ: "${TIMEZONE}"
+      RADARR__INSTANCE_NAME: Radarr
+      RADARR__LOG_LEVEL: info
+      RADARR__APPLICATION_URL: &host "https://movies.k8s.${SECRET_DOMAIN}"
+      RADARR__PORT: &port 80
+    service:
+      main:
+        ports:
+          http:
+            port: *port
     ingress:
       main:
         enabled: true
-        ingressClassName: "traefik"
+        ingressClassName: traefik
         annotations:
-          cert-manager.io/cluster-issuer: "letsencrypt-production"
+          cert-manager.io/cluster-issuer: letsencrypt-production
           hajimari.io/enable: "true"
-          hajimari.io/icon: "movie-roll"
+          hajimari.io/icon: movie-roll
           traefik.ingress.kubernetes.io/router.entrypoints: websecure
-          # kubernetes.io/ingress.class: "nginx"
-          # external-dns.alpha.kubernetes.io/target: "home.${SECRET_PUBLIC_DOMAIN}"
-          # nginx.ingress.kubernetes.io/auth-url: "https://auth.${SECRET_PUBLIC_DOMAIN}/oauth2/auth"
-          # nginx.ingress.kubernetes.io/auth-signin: https://auth.${SECRET_PUBLIC_DOMAIN}/oauth2/start
         hosts:
-          - host: "movies.k8s.${SECRET_DOMAIN}"
+          - host: *host
             paths:
               - path: /
                 pathType: Prefix
         tls:
           - hosts:
-              - "movies.k8s.${SECRET_DOMAIN}"
-            secretName: "radarr-tls"
+              - *host
+            secretName: radarr-tls
     persistence:
       config:
         enabled: true
-        existingClaim: radarr-config-pvc
+        existingClaim: *app
       nas-nfs-media:
         enabled: true
-        type: custom
-        volumeSpec:
-          nfs:
-            server: "nas.${SECRET_DOMAIN}"
-            path: /mnt/storage-x/media/plex/Movies
+        type: nfs
+        server: "nas.${SECRET_DOMAIN}"
+        path: /mnt/storage-x/media/plex/Movies
         mountPath: /movies
-        readOnly: false
     podSecurityContext:
       runAsUser: 1000
       runAsGroup: 1000
