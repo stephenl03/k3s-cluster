@@ -34,7 +34,7 @@ spec:
       TZ: "${TIMEZONE}"
       SONARR__INSTANCE_NAME: Sonarr
       SONARR__LOG_LEVEL: info
-      SONARR__APPLICATION_URL: &host "https://tv.k8s.${SECRET_PUBLIC_DOMAIN}"
+      SONARR__APPLICATION_URL: "https://tv.k8s.${SECRET_DOMAIN}"
       SONARR__PORT: &port 80
     envFrom:
       - secretRef:
@@ -54,7 +54,7 @@ spec:
           hajimari.io/icon: television-classic
           traefik.ingress.kubernetes.io/router.entrypoints: websecure
         hosts:
-          - host: *host
+          - host: &host "tv.k8s.${SECRET_DOMAIN}"
             paths:
               - path: /
                 pathType: Prefix
