@@ -4,3 +4,4 @@ kind: Kustomization
 resources:
   - sonarr
   - radarr
+  - overseer

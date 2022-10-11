@@ -36,7 +36,7 @@ spec:
       tag: 1.30.0
     env:
       TZ: "${TIMEZONE}"
-      LOG_LEVEL: "info"
+      LOG_LEVEL: info
       PORT: &port 80
     service:
       main:
@@ -46,15 +46,14 @@ spec:
     ingress:
       main:
         enabled: true
-        ingressClassName: "nginx"
+        ingressClassName: traefik
         annotations:
-          external-dns.home.arpa/enabled: "true"
-          # nginx.ingress.kubernetes.io/configuration-snippet: |
-          #   proxy_set_header Accept-Encoding "";
-          #   sub_filter '</head>' '<link rel="stylesheet" type="text/css" href="https://theme-park.${SECRET_PUBLIC_DOMAIN}/css/base/overseerr/nord.css"></head>';
-          #   sub_filter_once on;
+          cert-manager.io/cluster-issuer: letsencrypt-production
+          hajimari.io/enable: "true"
+          hajimari.io/icon: application
+          traefik.ingress.kubernetes.io/router.entrypoints: websecure
         hosts:
-          - host: &host "requests.${SECRET_PUBLIC_DOMAIN}"
+          - host: &host "requests.k8s.${SECRET_DOMAIN}"
             paths:
               - path: /
                 pathType: Prefix
@@ -65,7 +64,7 @@ spec:
       runAsUser: 1000
       runAsGroup: 1000
       fsGroup: 1000
-      fsGroupChangePolicy: "OnRootMismatch"
+      fsGroupChangePolicy: OnRootMismatch
     persistence:
       config:
         enabled: true
