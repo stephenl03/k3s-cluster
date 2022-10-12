@@ -71,6 +71,18 @@ spec:
         enabled: true
         existingClaim: *app
         mountPath: /app/config
+      nas-nfs-movies:
+        enabled: true
+        type: nfs
+        server: "nas.${SECRET_DOMAIN}"
+        path: /mnt/storage-x/media/plex/Movies
+        mountPath: /movies
+      nfs-nas-tv:
+        enabled: true
+        type: nfs
+        server: "nas.${SECRET_DOMAIN}"
+        path: /mnt/storage-x/TVShows
+        mountPath: /tv
     resources:
       requests:
         cpu: 10m
