@@ -1,0 +1,16 @@
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: &name nzbget-downloads
+  namespace: media
+  labels:
+    app.kubernetes.io/name: *name
+    app.kubernetes.io/instance: *name
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 100Gi
+  storageClassName: longhorn

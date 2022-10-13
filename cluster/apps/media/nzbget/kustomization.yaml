@@ -2,8 +2,5 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
-  - downloads-pvc.yaml
-  - sonarr
-  - radarr
-  - overseerr
-  - nzbget
+  - config-pvc.yaml
+  - helm-release.yaml
