@@ -37,7 +37,7 @@ spec:
       main:
         ports:
           http:
-            port: &port 80
+            port: 6789
     ingress:
       main:
         enabled: true
