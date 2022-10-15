@@ -76,7 +76,7 @@ spec:
         mountPath: /config/nzbget.conf
         volumeSpec:
           secret:
-            secretName: nzbget-conf
+            secretName: nzbget
     resources:
       requests:
         memory: 300Mi
