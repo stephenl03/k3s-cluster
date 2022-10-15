@@ -70,13 +70,6 @@ spec:
         enabled: true
         mountPath: /downloads
         existingClaim: nzbget-downloads
-      configinc:
-        enabled: true
-        type: custom
-        mountPath: /config/nzbget.conf
-        volumeSpec:
-          secret:
-            secretName: nzbget
     resources:
       requests:
         memory: 300Mi
