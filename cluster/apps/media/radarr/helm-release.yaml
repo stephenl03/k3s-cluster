@@ -70,6 +70,10 @@ spec:
         server: "nas.${SECRET_DOMAIN}"
         path: /mnt/storage-x/media/plex/Movies
         mountPath: /movies
+      downloads:
+        enabled: true
+        mountPath: /downloads
+        existingClaim: nzbget-downloads
     podSecurityContext:
       runAsUser: 1000
       runAsGroup: 1000
