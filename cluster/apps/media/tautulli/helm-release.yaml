@@ -2,18 +2,12 @@
 apiVersion: helm.toolkit.fluxcd.io/v2beta1
 kind: HelmRelease
 metadata:
-  name: &app nzbget
+  name: &app tautulli
   namespace: media
 spec:
-  dependsOn:
-    - name: longhorn
-      namespace: longhorn-system
-    - name: traefik
-      namespace: networking
   interval: 15m
   chart:
     spec:
-      # renovate: registryUrl=https://bjw-s.github.io/helm-charts
       chart: app-template
       version: 0.2.2
       sourceRef:
@@ -29,50 +23,44 @@ spec:
       retries: 5
   values:
     image:
-      repository: ghcr.io/onedr0p/nzbget
-      tag: "21.1"
+      repository: ghcr.io/onedr0p/tautulli
+      tag: 2.10.4
     env:
       TZ: "${TIMEZONE}"
     service:
       main:
         ports:
           http:
-            port: 6789
+            port: 8181
     ingress:
       main:
         enabled: true
         ingressClassName: traefik
         annotations:
+          external-dns.home.arpa/enabled: "true"
           cert-manager.io/cluster-issuer: letsencrypt-production
-          hajimari.io/enable: "true"
-          hajimari.io/icon: download-box
-          hajimari.io/group: Media
           traefik.ingress.kubernetes.io/router.entrypoints: websecure
         hosts:
-        - host: &host "{{ .Release.Name }}.k8s.${SECRET_DOMAIN}"
-          paths:
-          - path: /
-            pathType: Prefix
+          - host: &host "{{ .Release.Name }}.k8s.${SECRET_DOMAIN}"
+            paths:
+              - path: /
+                pathType: Prefix
         tls:
-        - hosts:
-          - *host
-          secretName: nzbget-tls
+          - hosts:
+              - *host
+            secretName: tautulli-tls
     podSecurityContext:
-      runAsUser: 1000
-      runAsGroup: 1000
-      fsGroup: 1000
-      fsGroupChangePolicy: OnRootMismatch
+      runAsUser: 568
+      runAsGroup: 568
+      fsGroup: 568
+      fsGroupChangePolicy: "OnRootMismatch"
     persistence:
       config:
         enabled: true
         existingClaim: *app
-      downloads:
-        enabled: true
-        mountPath: /downloads
-        existingClaim: nzbget-downloads
     resources:
       requests:
-        memory: 300Mi
-        cpu: 100m
+        cpu: 10m
+        memory: 250Mi
       limits:
-        memory: 4000Mi
+        memory: 500Mi
