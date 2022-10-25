@@ -1,12 +1,11 @@
 ---
 - name: Linux Reboot
-  hosts:
-    - master
-    - worker
+  hosts: all
   gather_facts: no
+  remote_user: devops
   become: true
-
+ 
   tasks:
-    - name: Reboot the machine
+    - name: Reboot the machine (Wait for 5 min)
       reboot:
-        throttle: 1
+        reboot_timeout: 300

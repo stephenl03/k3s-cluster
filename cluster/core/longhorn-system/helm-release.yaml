@@ -27,7 +27,7 @@ spec:
       replicaSoftAntiAffinity: false
       storageMinimalAvailablePercentage: 10
       defaultLonghornStaticStorageClass: longhorn
-      autoDeletePodWhenVolumeDetachedUnexpectedly: false
+      autoDeletePodWhenVolumeDetachedUnexpectedly: true
     ingress:
       enabled: true
       ingressClassName: traefik
