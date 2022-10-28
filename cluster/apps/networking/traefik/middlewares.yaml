@@ -1,0 +1,52 @@
+---
+apiVersion: traefik.containo.us/v1alpha1
+kind: Middleware
+metadata:
+  name: redirect-https
+  namespace: networking
+spec:
+  redirectScheme:
+    scheme: https
+    permanent: true
+---
+apiVersion: traefik.containo.us/v1alpha1
+kind: Middleware
+metadata:
+  name: default-headers
+  namespace: networking
+spec:
+  headers:
+    browserXssFilter: true
+    contentTypeNosniff: true
+    customResponseHeaders:
+      server: ""
+      x-applicationversion: ""
+      x-ua-compatible: ""
+      x-robots-tag: none
+    frameDeny: true
+    customFrameOptionsValue: SAMEORIGIN
+    sslRedirect: true
+    stsSeconds: 31536000
+    stsPreload: true
+    forceSTSHeader: true
+    referrerPolicy: no-referrer
+    isDevelopment: false
+---
+apiVersion: traefik.containo.us/v1alpha1
+kind: Middleware
+metadata:
+  name: default-compress
+  namespace: networking
+spec:
+  compress: {}
+---
+apiVersion: traefik.containo.us/v1alpha1
+kind: Middleware
+metadata:
+  name: default-middlewares-chain
+  namespace: networking
+spec:
+  chain:
+    middlewares:
+    - name: default-compress
+    - name: default-headers
