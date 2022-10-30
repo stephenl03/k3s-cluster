@@ -23,5 +23,4 @@
         update_cache: yes
         name: '*'
         state: latest
-        autoremove: yes
       when: ansible_facts["distribution"] == "Fedora"
