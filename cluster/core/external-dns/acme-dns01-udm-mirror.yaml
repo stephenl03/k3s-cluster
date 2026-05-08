@@ -1,0 +1,119 @@
+# Mirrors active cert-manager DNS-01 Challenge TXT records into UniFi/UDM local DNS.
+# Why: this network appears to intercept outbound DNS/53 to the UDM. cert-manager's
+# DNS-01 self-check therefore sees UDM DNS, while Let's Encrypt sees Cloudflare.
+# Cloudflare remains the real public ACME solver; this only satisfies local self-checks.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: acme-dns01-udm-mirror
+  namespace: external-dns
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: acme-dns01-udm-mirror
+rules:
+  - apiGroups: ["acme.cert-manager.io"]
+    resources: ["challenges"]
+    verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: acme-dns01-udm-mirror
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: acme-dns01-udm-mirror
+subjects:
+  - kind: ServiceAccount
+    name: acme-dns01-udm-mirror
+    namespace: external-dns
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: acme-dns01-udm-mirror
+  namespace: external-dns
+spec:
+  schedule: "*/1 * * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      template:
+        spec:
+          serviceAccountName: acme-dns01-udm-mirror
+          restartPolicy: Never
+          containers:
+            - name: mirror
+              image: python:3.12-alpine
+              imagePullPolicy: IfNotPresent
+              env:
+                - name: UDM_HOST
+                  value: https://192.168.9.1
+                - name: UDM_API_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: external-dns-unifi-secret
+                      key: api-key
+              command:
+                - python3
+                - -c
+                - |
+                  import json, os, ssl, urllib.request
+
+                  token = open('/var/run/secrets/kubernetes.io/serviceaccount/token').read().strip()
+                  ca = '/var/run/secrets/kubernetes.io/serviceaccount/ca.crt'
+                  api = 'https://kubernetes.default.svc'
+                  hdr = {'Authorization': 'Bearer ' + token}
+
+                  k8s_ctx = ssl.create_default_context(cafile=ca)
+
+                  def k8s(path):
+                      req = urllib.request.Request(api + path, headers=hdr)
+                      return json.load(urllib.request.urlopen(req, context=k8s_ctx, timeout=20))
+
+                  def udm(method, path, body=None):
+                      data = None if body is None else json.dumps(body).encode()
+                      req = urllib.request.Request(os.environ['UDM_HOST'] + path, data=data, method=method,
+                          headers={'X-API-KEY': os.environ['UDM_API_KEY'], 'Content-Type': 'application/json'})
+                      ctx = ssl._create_unverified_context()
+                      with urllib.request.urlopen(req, context=ctx, timeout=20) as r:
+                          return json.load(r) if r.readable() else None
+
+                  challenges = k8s('/apis/acme.cert-manager.io/v1/challenges').get('items', [])
+                  desired = {}
+                  for c in challenges:
+                      spec = c.get('spec', {})
+                      status = c.get('status', {})
+                      if spec.get('type') != 'DNS-01':
+                          continue
+                      if status.get('state') not in (None, '', 'pending') and not status.get('processing'):
+                          continue
+                      dns = spec.get('dnsName')
+                      key = spec.get('key')
+                      if dns and key:
+                          desired['_acme-challenge.' + dns.rstrip('.')] = '"' + key + '"'
+
+                  if not desired:
+                      print('no active DNS-01 challenges')
+                      raise SystemExit(0)
+
+                  records = udm('GET', '/proxy/network/v2/api/site/default/static-dns')
+                  by_key = {}
+                  for r in records:
+                      if r.get('record_type') == 'TXT':
+                          by_key.setdefault(r.get('key'), []).append(r)
+
+                  for name, value in desired.items():
+                      current = by_key.get(name, [])
+                      if any(r.get('value') == value for r in current):
+                          print('present', name)
+                          continue
+                      body = {'key': name, 'record_type': 'TXT', 'value': value, 'ttl': 0,
+                              'enabled': True, 'port': 0, 'priority': 0, 'weight': 0}
+                      udm('POST', '/proxy/network/v2/api/site/default/static-dns', body)
+                      print('created', name)

@@ -1,4 +1,5 @@
+# Intentionally empty for phase1 core recovery.
+# kube-vip is parked in cluster/optional/kube-vip until there is a multi-control-plane API VIP plan.
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
-resources:
-  - kube-vip
+resources: []

@@ -3,7 +3,7 @@ kind: Kustomization
 resources:
   - longhorn-system
   - cert-manager
-  - kube-system
   - metallb-system
+  - external-dns
   - system-upgrade
   - node-feature-discovery

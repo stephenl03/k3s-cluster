@@ -1,18 +1,17 @@
+apiVersion: metallb.io/v1beta1
+kind: IPAddressPool
+metadata:
+  name: k8s-lb-pool
+  namespace: metallb-system
+spec:
+  addresses:
+    - 172.16.50.200-172.16.50.240
 ---
 apiVersion: metallb.io/v1beta1
 kind: L2Advertisement
 metadata:
-  name: l2-ip
+  name: k8s-l2
   namespace: metallb-system
 spec:
   ipAddressPools:
-    - default-pool
----
-apiVersion: metallb.io/v1beta1
-kind: IPAddressPool
-metadata:
-  name: default-pool
-  namespace: metallb-system
-spec:
-  addresses:
-    - "${METALLB_LB_RANGE}"
+    - k8s-lb-pool
