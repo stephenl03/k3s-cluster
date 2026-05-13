@@ -27,8 +27,8 @@ spec:
       retries: 5
   values:
     image:
-      repository: ghcr.io/onedr0p/nzbget
-      tag: "21.1"
+      repository: lscr.io/linuxserver/nzbget
+      tag: latest
     env:
       TZ: "${TIMEZONE}"
     service:

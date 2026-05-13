@@ -73,13 +73,13 @@ spec:
       nas-nfs-movies:
         enabled: true
         type: nfs
-        server: "nas.${SECRET_DOMAIN}"
+        server: "172.16.10.145"
         path: /mnt/storage-x/media/plex/Movies
         mountPath: /movies
       nfs-nas-tv:
         enabled: true
         type: nfs
-        server: "nas.${SECRET_DOMAIN}"
+        server: "172.16.10.145"
         path: /mnt/storage-x/TVShows
         mountPath: /tv
     resources:
