@@ -16,7 +16,7 @@ spec:
   chart:
     spec:
       chart: ./charts/seerr-chart
-      version: 3.6.0
+      version: 3.4.2
       sourceRef:
         kind: GitRepository
         name: seerr-source
