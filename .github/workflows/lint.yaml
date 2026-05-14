@@ -9,10 +9,11 @@ on: # yamllint disable-line rule:truthy
 
 jobs:
   yamllint:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v6
+
       - name: Get changes
         uses: dorny/paths-filter@v2
         id: filter
@@ -22,6 +23,7 @@ jobs:
             yaml:
               - added|modified: "**.yaml"
               - added|modified: "**.yml"
+
       - name: Lint files
         if: ${{ steps.filter.outputs.yaml == 'true' }}
         uses: reviewdog/action-yamllint@v1
