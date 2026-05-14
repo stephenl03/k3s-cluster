@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: pmm-config
+  name: kometa-config
   namespace: media
 data:
   config.yml: |
@@ -64,7 +64,7 @@ data:
       monitor: false
       availability: cinemas
       quality_profile: HD - 720p/1080p
-      tag: pmm
+      tag: kometa
       add_existing: false
       search: false
       radarr_path:
@@ -80,7 +80,7 @@ data:
       language_profile: English
       series_type: standard
       season_folder: true
-      tag: pmm
+      tag: kometa
       search: true
       cutoff_search: false
       sonarr_path:

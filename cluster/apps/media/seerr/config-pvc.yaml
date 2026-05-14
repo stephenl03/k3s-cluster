@@ -1,12 +1,12 @@
----
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
+  # Keep the existing Overseerr claim during the Seerr migration so app data is not pruned.
   name: &name overseerr
   namespace: media
   labels:
-    app.kubernetes.io/name: *name
-    app.kubernetes.io/instance: *name
+    app.kubernetes.io/name: seerr
+    app.kubernetes.io/instance: seerr
 spec:
   accessModes:
     - ReadWriteOnce

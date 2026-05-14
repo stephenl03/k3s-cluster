@@ -7,6 +7,6 @@ resources:
   - prowlarr
   - sonarr
   - radarr
-  - overseerr
+  - seerr
   - nzbget
   - tautulli

@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: &name plex-media-manager
+  name: &name kometa
   namespace: media
   labels:
     app.kubernetes.io/name: *name

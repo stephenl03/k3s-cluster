@@ -1,0 +1,16 @@
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: seerr-source
+  namespace: flux-system
+spec:
+  interval: 30m
+  url: https://github.com/seerr-team/seerr.git
+  ref:
+    tag: v3.2.0
+  ignore: |
+    # exclude all
+    /*
+    # include the official Helm chart
+    !/charts/seerr-chart/

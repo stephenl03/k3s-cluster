@@ -1,7 +1,7 @@
 apiVersion: batch/v1
 kind: CronJob
 metadata:
-  name: plex-media-manager
+  name: kometa
   namespace: media
 spec:
   schedule: "0 0 * * *"
@@ -13,8 +13,8 @@ spec:
             runAsUser: 1000
             runAsGroup: 1000
           containers:
-            - name: plex-media-manager
-              image: meisnate12/plex-meta-manager:latest
+            - name: kometa
+              image: kometateam/kometa:latest
               imagePullPolicy: IfNotPresent
               args: [ "--run", "--read-only-config" ]
               resources:
@@ -27,7 +27,7 @@ spec:
               volumeMounts:
                 - name: config
                   mountPath: /config
-                - name: pmm-config
+                - name: kometa-config
                   mountPath: /config/config.yml
                   subPath: config.yml
                 - name: movie-config
@@ -39,10 +39,10 @@ spec:
           volumes:
             - name: config
               persistentVolumeClaim:
-                claimName: plex-media-manager
+                claimName: kometa
             - configMap:
-                name: pmm-config
-              name: pmm-config
+                name: kometa-config
+              name: kometa-config
             - configMap:
                 name: movie-config
               name: movie-config
