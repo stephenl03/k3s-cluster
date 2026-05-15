@@ -66,8 +66,10 @@ spec:
     name: i915
     nodeFeatureRule: true
     # Expose the Intel iGPU only on the Lenovo M920q nodes. NFD labels their
-    # i5-8500T CPUs as family 6/model 158; the older NUCs are model 76.
+    # i5-8500T CPUs as family 6/model 158 and detects the Intel VGA PCI device.
+    # The upstream Intel NFR label requires i915/xe to already be loaded, which
+    # is not true on these headless nodes before the plugin starts.
     nodeSelector:
-      intel.feature.node.kubernetes.io/gpu: "true"
       feature.node.kubernetes.io/cpu-model.id: "158"
+      feature.node.kubernetes.io/pci-0300_8086.present: "true"
     sharedDevNum: 99
