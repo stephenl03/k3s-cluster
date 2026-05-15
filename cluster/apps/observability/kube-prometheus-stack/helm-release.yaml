@@ -1,0 +1,176 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: kube-prometheus-stack
+  namespace: observability
+spec:
+  interval: 15m
+  chart:
+    spec:
+      # renovate: registryUrl=https://prometheus-community.github.io/helm-charts
+      chart: kube-prometheus-stack
+      version: 85.1.1
+      sourceRef:
+        kind: HelmRepository
+        name: prometheus-community-charts
+        namespace: flux-system
+      interval: 15m
+  install:
+    crds: CreateReplace
+    remediation:
+      retries: 5
+  upgrade:
+    crds: CreateReplace
+    cleanupOnFail: true
+    remediation:
+      retries: 5
+  values:
+    cleanPrometheusOperatorObjectNames: true
+    defaultRules:
+      create: true
+      rules:
+        etcd: false
+        kubeControllerManager: false
+        kubeProxy: false
+        kubeScheduler: false
+    alertmanager:
+      ingress:
+        enabled: true
+        ingressClassName: traefik
+        annotations:
+          cert-manager.io/cluster-issuer: letsencrypt-production
+          hajimari.io/enable: "true"
+          hajimari.io/icon: alert
+          hajimari.io/group: observability
+          traefik.ingress.kubernetes.io/router.entrypoints: websecure
+        hosts:
+          - alertmanager.k8s.${SECRET_DOMAIN}
+        tls:
+          - hosts:
+              - alertmanager.k8s.${SECRET_DOMAIN}
+            secretName: alertmanager-tls
+      alertmanagerSpec:
+        retention: 120h
+        storage:
+          volumeClaimTemplate:
+            spec:
+              accessModes:
+                - ReadWriteOnce
+              resources:
+                requests:
+                  storage: 2Gi
+    grafana:
+      enabled: true
+      defaultDashboardsTimezone: ${TIMEZONE}
+      admin:
+        existingSecret: grafana-admin-secret
+        userKey: admin-user
+        passwordKey: admin-password
+      ingress:
+        enabled: true
+        ingressClassName: traefik
+        annotations:
+          cert-manager.io/cluster-issuer: letsencrypt-production
+          hajimari.io/enable: "true"
+          hajimari.io/icon: grafana
+          hajimari.io/group: observability
+          traefik.ingress.kubernetes.io/router.entrypoints: websecure
+        hosts:
+          - grafana.k8s.${SECRET_DOMAIN}
+        tls:
+          - hosts:
+              - grafana.k8s.${SECRET_DOMAIN}
+            secretName: grafana-tls
+      sidecar:
+        dashboards:
+          enabled: true
+          searchNamespace: ALL
+        datasources:
+          enabled: true
+          searchNamespace: ALL
+      additionalDataSources:
+        - name: Loki
+          type: loki
+          access: proxy
+          url: http://loki:3100
+          jsonData:
+            maxLines: 1000
+      persistence:
+        enabled: true
+        size: 5Gi
+      resources:
+        requests:
+          cpu: 50m
+          memory: 256Mi
+        limits:
+          memory: 512Mi
+    kubeApiServer:
+      enabled: true
+    kubeControllerManager:
+      enabled: false
+    kubeEtcd:
+      enabled: false
+    kubeProxy:
+      enabled: false
+    kubeScheduler:
+      enabled: false
+    kubelet:
+      enabled: true
+      serviceMonitor:
+        cAdvisor: true
+    prometheus:
+      ingress:
+        enabled: true
+        ingressClassName: traefik
+        annotations:
+          cert-manager.io/cluster-issuer: letsencrypt-production
+          hajimari.io/enable: "true"
+          hajimari.io/icon: chart-line
+          hajimari.io/group: observability
+          traefik.ingress.kubernetes.io/router.entrypoints: websecure
+        hosts:
+          - prometheus.k8s.${SECRET_DOMAIN}
+        tls:
+          - hosts:
+              - prometheus.k8s.${SECRET_DOMAIN}
+            secretName: prometheus-tls
+      prometheusSpec:
+        retention: 14d
+        retentionSize: 8GB
+        scrapeInterval: 1m
+        evaluationInterval: 1m
+        serviceMonitorSelectorNilUsesHelmValues: false
+        podMonitorSelectorNilUsesHelmValues: false
+        probeSelectorNilUsesHelmValues: false
+        ruleSelectorNilUsesHelmValues: false
+        storageSpec:
+          volumeClaimTemplate:
+            spec:
+              accessModes:
+                - ReadWriteOnce
+              resources:
+                requests:
+                  storage: 10Gi
+      additionalServiceMonitors:
+        - name: unpoller
+          selector:
+            matchLabels:
+              app.kubernetes.io/service: unpoller
+          namespaceSelector:
+            matchNames:
+              - observability
+          endpoints:
+            - port: http
+              path: /metrics
+              interval: 1m
+    prometheusOperator:
+      admissionWebhooks:
+        certManager:
+          enabled: true
+        patch:
+          enabled: false
+    prometheus-node-exporter:
+      prometheus:
+        monitor:
+          enabled: true
