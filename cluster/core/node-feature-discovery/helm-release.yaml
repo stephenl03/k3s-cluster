@@ -12,7 +12,7 @@ spec:
     spec:
       # renovate: registryUrl=https://kubernetes-sigs.github.io/node-feature-discovery/charts
       chart: node-feature-discovery
-      version: 0.11.1
+      version: 0.18.3
       sourceRef:
         kind: HelmRepository
         name: node-feature-discovery-charts
@@ -22,8 +22,11 @@ spec:
   upgrade:
     crds: CreateReplace
   values:
-    nodeFeatureRule:
-      createCRD: true
+    master:
+      extraLabelNs:
+        - gpu.intel.com
+        - intel.feature.node.kubernetes.io
+      replicaCount: 1
     worker:
       annotations:
         configmap.reloader.stakater.com/reload: "nfd-worker-conf"
@@ -34,5 +37,3 @@ spec:
           operator: "Exists"
         - effect: "NoSchedule"
           operator: "Exists"
-    master:
-      replicaCount: 1
