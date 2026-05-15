@@ -14,14 +14,25 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 1
+          persist-credentials: false
+
+      - name: Prepare HelmRelease apiVersion for renovate-helm-releases
+        run: |
+          find ./cluster -path "*/helm-release.yaml" -type f -exec \
+            sed -i 's#^apiVersion: helm.toolkit.fluxcd.io/v2$#apiVersion: helm.toolkit.fluxcd.io/v2beta1#' {} +
 
       - name: Renovate Helm Releases
-        uses: k8s-at-home/renovate-helm-releases@v1
+        uses: allenporter/renovate-helm-releases@v2.0.1
         with:
           cluster-path: "./cluster"
 
+      - name: Restore HelmRelease apiVersion
+        run: |
+          find ./cluster -path "*/helm-release.yaml" -type f -exec \
+            sed -i 's#^apiVersion: helm.toolkit.fluxcd.io/v2beta1$#apiVersion: helm.toolkit.fluxcd.io/v2#' {} +
+
       - name: Create pull request for renovatebot helm-release annotations
-        uses: peter-evans/create-pull-request@v4
+        uses: peter-evans/create-pull-request@v7
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           branch: renovate-annotations
