@@ -1,0 +1,73 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: intel-device-plugins-operator
+  namespace: kube-system
+spec:
+  dependsOn:
+    - name: cert-manager
+      namespace: cert-manager
+    - name: node-feature-discovery
+      namespace: kube-system
+  interval: 15m
+  chart:
+    spec:
+      chart: intel-device-plugins-operator
+      version: 0.35.0
+      sourceRef:
+        kind: HelmRepository
+        name: intel-charts
+        namespace: flux-system
+      interval: 15m
+  install:
+    crds: CreateReplace
+    remediation:
+      retries: 5
+  upgrade:
+    cleanupOnFail: true
+    crds: CreateReplace
+    remediation:
+      retries: 5
+  values:
+    manager:
+      devices:
+        gpu: true
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: intel-device-plugins-gpu
+  namespace: kube-system
+spec:
+  dependsOn:
+    - name: intel-device-plugins-operator
+      namespace: kube-system
+    - name: node-feature-discovery
+      namespace: kube-system
+  interval: 15m
+  chart:
+    spec:
+      chart: intel-device-plugins-gpu
+      version: 0.35.0
+      sourceRef:
+        kind: HelmRepository
+        name: intel-charts
+        namespace: flux-system
+      interval: 15m
+  install:
+    remediation:
+      retries: 5
+  upgrade:
+    cleanupOnFail: true
+    remediation:
+      retries: 5
+  values:
+    name: i915
+    nodeFeatureRule: true
+    # Expose the Intel iGPU only on the Lenovo M920q nodes. NFD labels their
+    # i5-8500T CPUs as family 6/model 158; the older NUCs are model 76.
+    nodeSelector:
+      intel.feature.node.kubernetes.io/gpu: "true"
+      feature.node.kubernetes.io/cpu-model.id: "158"
+    sharedDevNum: 99
