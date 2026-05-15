@@ -1,0 +1,90 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app vikunja
+  namespace: default
+spec:
+  dependsOn:
+    - name: longhorn
+      namespace: longhorn-system
+  interval: 15m
+  chart:
+    spec:
+      chart: app-template
+      version: 4.6.2
+      sourceRef:
+        kind: HelmRepository
+        name: bjw-s-charts
+        namespace: flux-system
+      interval: 15m
+  install:
+    remediation:
+      retries: 5
+  upgrade:
+    cleanupOnFail: true
+    remediation:
+      retries: 5
+  values:
+    defaultPodOptions:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 0
+        fsGroupChangePolicy: OnRootMismatch
+    controllers:
+      vikunja:
+        annotations:
+          reloader.stakater.com/auto: "true"
+        containers:
+          app:
+            image:
+              repository: vikunja/vikunja
+              tag: 2.3.0@sha256:f6b80393c1998cd5cd0dc38d24762c59ab4c10000a6f1032ef5b554e262cab93
+            envFrom:
+              - secretRef:
+                  name: vikunja-secret
+            env:
+              TZ: "${TIMEZONE}"
+              VIKUNJA_DATABASE_TYPE: sqlite
+              VIKUNJA_DATABASE_PATH: /db/vikunja.db
+              VIKUNJA_SERVICE_PUBLICURL: "https://vikunja.k8s.${SECRET_DOMAIN}"
+            resources:
+              requests:
+                cpu: 5m
+                memory: 10Mi
+              limits:
+                memory: 100Mi
+    service:
+      app:
+        controller: *app
+        ports:
+          http:
+            port: &port 3456
+    ingress:
+      app:
+        className: traefik
+        annotations:
+          cert-manager.io/cluster-issuer: letsencrypt-production
+          traefik.ingress.kubernetes.io/router.entrypoints: websecure
+        hosts:
+          - host: &host "vikunja.k8s.${SECRET_DOMAIN}"
+            paths:
+              - path: /
+                service:
+                  identifier: app
+                  port: http
+        tls:
+          - hosts:
+              - *host
+            secretName: vikunja-tls
+    persistence:
+      config:
+        existingClaim: vikunja-config
+        advancedMounts:
+          vikunja:
+            app:
+              - path: /db
+                subPath: db
+              - path: /app/vikunja/files
+                subPath: files
