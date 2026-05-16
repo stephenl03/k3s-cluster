@@ -15,4 +15,5 @@ This stack is the Kubernetes-first observability migration target.
 - Gatus/blackbox probes for uptime checks.
 - SMART/disk telemetry via smartctl-exporter.
 - Grafana Operator/dashboard CRDs. The bundled Grafana is simpler for the first migration pass.
-- VictoriaLogs/Fluent Bit. chr1sd's stack uses this pattern well; consider it later if Loki/Promtail becomes too heavy or Promtail deprecation becomes painful.
+- Grafana Alloy replacing Promtail. Promtail is in LTS and should be swapped for Alloy soon, but Promtail is the smaller first pass for getting Loki ingestion working.
+- VictoriaLogs/Fluent Bit. chr1sd's stack uses this pattern well; consider it later if Loki/Alloy becomes too heavy.
