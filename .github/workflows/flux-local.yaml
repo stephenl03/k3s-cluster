@@ -1,0 +1,138 @@
+---
+name: Flux Local
+
+on: # yamllint disable-line rule:truthy
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "cluster/**"
+      - ".github/workflows/flux-local.yaml"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pre-job:
+    name: Flux Local Pre-Job
+    runs-on: ubuntu-latest
+    outputs:
+      any_changed: ${{ steps.changed-files.outputs.any_changed }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Get changed files
+        id: changed-files
+        uses: tj-actions/changed-files@v47
+        with:
+          files: |
+            cluster/**
+            .github/workflows/flux-local.yaml
+
+  test:
+    name: Flux Local Test
+    needs: pre-job
+    runs-on: ubuntu-latest
+    if: ${{ needs.pre-job.outputs.any_changed == 'true' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Run flux-local test
+        uses: docker://ghcr.io/allenporter/flux-local:v8.0.1
+        with:
+          args: >-
+            test
+            --all-namespaces
+            --path /github/workspace/cluster/base
+            -v
+
+  diff:
+    name: Flux Local Diff
+    needs: pre-job
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    strategy:
+      matrix:
+        resources:
+          - helmrelease
+          - kustomization
+      max-parallel: 2
+      fail-fast: false
+    if: ${{ needs.pre-job.outputs.any_changed == 'true' }}
+    steps:
+      - name: Checkout pull request branch
+        uses: actions/checkout@v6
+        with:
+          path: pull
+
+      - name: Checkout default branch
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          path: default
+
+      - name: Run flux-local diff
+        uses: docker://ghcr.io/allenporter/flux-local:v8.0.1
+        with:
+          args: >-
+            diff ${{ matrix.resources }}
+            --unified 6
+            --path /github/workspace/pull/cluster/base
+            --path-orig /github/workspace/default/cluster/base
+            --strip-attrs "helm.sh/chart,checksum/config,app.kubernetes.io/version,chart"
+            --limit-bytes 10000
+            ${{ matrix.resources == 'helmrelease' && '--skip-invalid-helm-release-paths' || '' }}
+            --all-namespaces
+            --sources flux-system
+            --output-file diff.patch
+
+      - name: Generate diff summary
+        id: diff
+        run: |
+          cat diff.patch
+          {
+            echo 'diff<<EOF'
+            cat diff.patch
+            echo EOF
+          } >> "${GITHUB_OUTPUT}"
+          {
+            echo "### ${{ matrix.resources }} diff"
+            echo '```diff'
+            cat diff.patch
+            echo '```'
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+      - name: Add PR comment
+        if: ${{ steps.diff.outputs.diff != '' }}
+        continue-on-error: true
+        uses: mshick/add-pr-comment@v3
+        with:
+          message-id: ${{ github.event.pull_request.number }}/cluster/${{ matrix.resources }}
+          message-failure: Flux Local diff was not successful
+          message: |
+            ```diff
+            ${{ steps.diff.outputs.diff }}
+            ```
+
+  flux-local-status:
+    name: Flux Local Success
+    needs:
+      - test
+      - diff
+    runs-on: ubuntu-latest
+    if: ${{ always() }}
+    steps:
+      - name: Any jobs failed?
+        if: ${{ contains(needs.*.result, 'failure') }}
+        run: exit 1
+
+      - name: All jobs passed or skipped?
+        if: ${{ !contains(needs.*.result, 'failure') }}
+        run: |
+          echo "All jobs passed or skipped"
+          echo '${{ toJSON(needs.*.result) }}'
