@@ -9,10 +9,14 @@ on: # yamllint disable-line rule:truthy
 jobs:
   flux-upgrade:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
     steps:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 1
+          persist-credentials: false
 
       - name: Setup Flux CLI
         uses: fluxcd/flux2/action@main
@@ -25,10 +29,10 @@ jobs:
           flux install --version="${VERSION}" \
             --network-policy=false \
             --export > ./cluster/base/flux-system/gotk-components.yaml
-          echo "::set-output name=flux_version::$VERSION"
+          echo "flux_version=$VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Create pull request for Flux upgrade
-        uses: peter-evans/create-pull-request@v4
+        uses: peter-evans/create-pull-request@v7
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           branch: "flux/upgrade-${{ steps.upgrade.outputs.flux_version }}"
