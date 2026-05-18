@@ -32,7 +32,7 @@ jobs:
           echo "flux_version=$VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Create pull request for Flux upgrade
-        uses: peter-evans/create-pull-request@v7
+        uses: peter-evans/create-pull-request@v8
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           branch: "flux/upgrade-${{ steps.upgrade.outputs.flux_version }}"
