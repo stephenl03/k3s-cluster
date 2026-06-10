@@ -1,11 +1,17 @@
 {
-  "enabled": false,
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "semanticCommits": "enabled",
   "dependencyDashboard": true,
   "dependencyDashboardTitle": "Renovate Dashboard",
   "suppressNotifications": ["prIgnoreNotification"],
   "rebaseWhen": "conflicted",
   "schedule": ["* 2 1 * *"],
+  "ignorePaths": ["**/*.sops.*"],
+  "flux": {
+    "fileMatch": [
+      "cluster/.+\\.yaml$"
+    ]
+  },
   "helm-values": {
     "fileMatch": [
       "cluster/.+/helm-release\\.yaml$"
@@ -19,20 +25,10 @@
       "cluster/base/"
     ],
   },
-  "regexManagers": [
-    // regexManager to read and process HelmRelease files
+  "customManagers": [
+    // Process cert-manager CRDs that are pulled from a release URL.
     {
-      "fileMatch": [
-        "cluster/.+\\.yaml$"
-      ],
-      "matchStrings": [
-        // helm releases
-        "registryUrl=(?<registryUrl>.*?)\n *chart: (?<depName>.*?)\n *version: (?<currentValue>.*)\n"
-      ],
-      "datasourceTemplate": "helm"
-    },
-    // regexManager to read and process cert-manager CRD's
-    {
+      "customType": "regex",
       "fileMatch": [
         "cluster/crds/cert-manager/.+\\.yaml$"
       ],
@@ -41,10 +37,11 @@
       ],
       "datasourceTemplate": "helm"
     },
-    // regexManager to read and process Traefik CRD's
+    // Process GitRepository tags used to apply chart-owned CRDs.
     {
+      "customType": "regex",
       "fileMatch": [
-        "cluster/crds/traefik/.+\\.yaml$"
+        "cluster/crds/.+\\.yaml$"
       ],
       "matchStrings": [
         "registryUrl=(?<registryUrl>.*?) chart=(?<depName>.*?)\n *tag: v(?<currentValue>.*)\n"
