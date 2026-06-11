@@ -3,6 +3,7 @@ kind: Kustomization
 resources:
   - longhorn-system
   - cert-manager
+  - external-secrets
   - metallb-system
   - external-dns
   - system-upgrade
