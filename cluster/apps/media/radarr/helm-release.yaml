@@ -5,6 +5,7 @@ metadata:
   name: &app radarr
   namespace: media
 spec:
+  suspend: true
   dependsOn:
   - name: longhorn
     namespace: longhorn-system
@@ -13,7 +14,7 @@ spec:
     spec:
       # renovate: registryUrl=https://bjw-s-labs.github.io/helm-charts/
       chart: app-template
-      version: 0.2.2
+      version: 5.0.1
       sourceRef:
         kind: HelmRepository
         name: bjw-s-charts
@@ -26,24 +27,40 @@ spec:
     remediation:
       retries: 5
   values:
-    image:
-      repository: ghcr.io/onedr0p/radarr
-      tag: 5.20.1.9773
-    env:
-      TZ: "${TIMEZONE}"
-      RADARR__INSTANCE_NAME: Radarr
-      RADARR__LOG_LEVEL: info
-      RADARR__APPLICATION_URL: "https://movies.k8s.${SECRET_DOMAIN}"
-      RADARR__PORT: &port 80
+    controllers:
+      radarr:
+        containers:
+          app:
+            image:
+              repository: ghcr.io/onedr0p/radarr
+              tag: 5.20.1.9773
+            env:
+              TZ: "${TIMEZONE}"
+              RADARR__INSTANCE_NAME: Radarr
+              RADARR__LOG_LEVEL: info
+              RADARR__APPLICATION_URL: "https://movies.k8s.${SECRET_DOMAIN}"
+              RADARR__PORT: &port 80
+            resources:
+              requests:
+                memory: 350Mi
+                cpu: 25m
+              limits:
+                memory: 500Mi
+    defaultPodOptions:
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
     service:
-      main:
+      app:
+        controller: *app
         ports:
           http:
             port: *port
     ingress:
-      main:
-        enabled: true
-        ingressClassName: traefik
+      app:
+        className: traefik
         annotations:
           cert-manager.io/cluster-issuer: letsencrypt-production
           hajimari.io/enable: "true"
@@ -53,33 +70,25 @@ spec:
           - host: &host "movies.k8s.${SECRET_DOMAIN}"
             paths:
               - path: /
-                pathType: Prefix
+                service:
+                  identifier: app
+                  port: http
         tls:
           - hosts:
               - *host
             secretName: radarr-tls
     persistence:
       config:
-        enabled: true
         existingClaim: *app
+        globalMounts:
+          - path: /config
       nas-nfs-media:
-        enabled: true
         type: nfs
         server: "172.16.10.145"
         path: /mnt/storage-x/media/plex/Movies
-        mountPath: /movies
+        globalMounts:
+          - path: /movies
       downloads:
-        enabled: true
-        mountPath: /downloads
         existingClaim: nzbget-downloads
-    podSecurityContext:
-      runAsUser: 1000
-      runAsGroup: 1000
-      fsGroup: 1000
-      fsGroupChangePolicy: OnRootMismatch
-    resources:
-      requests:
-        memory: 350Mi
-        cpu: 25m
-      limits:
-        memory: 500Mi
+        globalMounts:
+          - path: /downloads
