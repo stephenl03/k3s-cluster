@@ -1,0 +1,10 @@
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: qdrant-charts
+  namespace: flux-system
+spec:
+  interval: 15m
+  url: https://qdrant.github.io/qdrant-helm
+  timeout: 3m

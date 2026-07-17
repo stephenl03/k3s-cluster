@@ -1,0 +1,45 @@
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: traefik-to-mempalace
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: mempalace
+      app.kubernetes.io/instance: mempalace
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: traefik
+              app.kubernetes.io/instance: traefik-kube-system
+      ports:
+        - port: 8765
+          protocol: TCP
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: mempalace-to-qdrant
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: qdrant
+      app.kubernetes.io/instance: qdrant
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: mempalace
+              app.kubernetes.io/instance: mempalace
+      ports:
+        - port: 6333
+          protocol: TCP

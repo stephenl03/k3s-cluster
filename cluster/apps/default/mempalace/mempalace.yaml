@@ -1,0 +1,267 @@
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mempalace-data
+  labels:
+    app.kubernetes.io/name: mempalace
+    app.kubernetes.io/instance: mempalace
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+  storageClassName: longhorn
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mempalace
+  labels:
+    app.kubernetes.io/name: mempalace
+    app.kubernetes.io/instance: mempalace
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: mempalace
+      app.kubernetes.io/instance: mempalace
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: mempalace
+        app.kubernetes.io/instance: mempalace
+      annotations:
+        secret.reloader.stakater.com/reload: mempalace-secrets
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile:
+          type: RuntimeDefault
+      initContainers:
+        - name: install-mempalace
+          image: docker.io/library/python:3.12.11-slim-bookworm@sha256:519591d6871b7bc437060736b9f7456b8731f1499a57e22e6c285135ae657bf7  # yamllint disable-line rule:line-length
+          command:
+            - /bin/sh
+            - -c
+            - |
+              set -eu
+              python -m venv /opt/venv
+              /opt/venv/bin/pip install \
+                --disable-pip-version-check \
+                --no-cache-dir \
+                --requirement /requirements/requirements.txt
+          env:
+            - name: HOME
+              value: /tmp
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            readOnlyRootFilesystem: true
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              memory: 1Gi
+          volumeMounts:
+            - name: python-environment
+              mountPath: /opt/venv
+            - name: python-dependencies
+              mountPath: /requirements
+              readOnly: true
+            - name: tmp
+              mountPath: /tmp
+        - name: wait-for-qdrant
+          image: docker.io/library/python:3.12.11-slim-bookworm@sha256:519591d6871b7bc437060736b9f7456b8731f1499a57e22e6c285135ae657bf7  # yamllint disable-line rule:line-length
+          command:
+            - python
+            - -c
+            - |
+              import os
+              import time
+              import urllib.request
+
+              request = urllib.request.Request(
+                  "http://qdrant:6333/readyz",
+                  headers={"api-key": os.environ["QDRANT_API_KEY"]},
+              )
+              for attempt in range(60):
+                  try:
+                      with urllib.request.urlopen(
+                          request,
+                          timeout=5,
+                      ) as response:
+                          if response.status == 200:
+                              raise SystemExit(0)
+                  except Exception:
+                      if attempt == 59:
+                          raise
+                      time.sleep(5)
+          env:
+            - name: QDRANT_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: qdrant-api-key
+                  key: api-key
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            readOnlyRootFilesystem: true
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              memory: 64Mi
+      containers:
+        - name: mempalace
+          image: docker.io/library/python:3.12.11-slim-bookworm@sha256:519591d6871b7bc437060736b9f7456b8731f1499a57e22e6c285135ae657bf7  # yamllint disable-line rule:line-length
+          command:
+            - /opt/venv/bin/mempalace-mcp
+          args:
+            - --transport
+            - http
+            - --host
+            - 0.0.0.0
+            - --port
+            - "8765"
+            - --backend
+            - qdrant
+            - --palace
+            - /data/.mempalace/palace
+          envFrom:
+            - secretRef:
+                name: mempalace-secrets
+          env:
+            - name: HOME
+              value: /data
+            - name: TZ
+              value: "${TIMEZONE}"
+            - name: PYTHONUNBUFFERED
+              value: "1"
+            - name: PYTHONDONTWRITEBYTECODE
+              value: "1"
+            - name: MEMPALACE_BACKEND
+              value: qdrant
+            - name: MEMPALACE_PALACE_PATH
+              value: /data/.mempalace/palace
+            - name: MEMPALACE_QDRANT_URL
+              value: http://qdrant:6333
+            - name: MEMPALACE_QDRANT_NAMESPACE
+              value: mempalace
+            - name: MEMPALACE_EMBEDDING_DEVICE
+              value: cpu
+            - name: MEMPALACE_EAGER_WARMUP
+              value: "1"
+          ports:
+            - name: http
+              containerPort: 8765
+              protocol: TCP
+          startupProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            failureThreshold: 60
+            periodSeconds: 5
+            timeoutSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            failureThreshold: 3
+            periodSeconds: 10
+            timeoutSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            failureThreshold: 5
+            periodSeconds: 30
+            timeoutSeconds: 5
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            readOnlyRootFilesystem: true
+          resources:
+            requests:
+              cpu: 200m
+              memory: 512Mi
+            limits:
+              memory: 2Gi
+          volumeMounts:
+            - name: data
+              mountPath: /data
+            - name: python-environment
+              mountPath: /opt/venv
+              readOnly: true
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: mempalace-data
+        - name: python-environment
+          emptyDir: {}
+        - name: python-dependencies
+          configMap:
+            name: mempalace-python-dependencies
+        - name: tmp
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mempalace
+  labels:
+    app.kubernetes.io/name: mempalace
+    app.kubernetes.io/instance: mempalace
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: mempalace
+    app.kubernetes.io/instance: mempalace
+  ports:
+    - name: http
+      port: 8765
+      targetPort: http
+      protocol: TCP
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: mempalace
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-production
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: &host "mempalace.k8s.${SECRET_DOMAIN}"
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: mempalace
+                port:
+                  name: http
+  tls:
+    - hosts:
+        - *host
+      secretName: mempalace-tls
