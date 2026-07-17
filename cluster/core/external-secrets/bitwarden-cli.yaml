@@ -37,6 +37,16 @@ spec:
           # renovate: datasource=docker depName=ghcr.io/charlesthomas/bitwarden-cli
           image: ghcr.io/charlesthomas/bitwarden-cli:2026.6.0@sha256:f8da73df51c6614b1439991a99132e3f1dfe3526a64978392650e72e82400398
           imagePullPolicy: IfNotPresent
+          command:
+            - /bin/bash
+            - -c
+            - |
+              set -euo pipefail
+              bw config server "${BW_HOST}"
+              bw login --apikey --raw >/dev/null
+              export BW_SESSION="$(bw unlock --passwordenv BW_PASSWORD --raw)"
+              bw unlock --check
+              exec bw serve --hostname all
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:
