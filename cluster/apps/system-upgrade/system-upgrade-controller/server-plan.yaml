@@ -7,16 +7,15 @@ metadata:
 spec:
   serviceAccountName: system-upgrade
   concurrency: 1
-  channel: https://update.k3s.io/v1-release/channels/stable
+  exclusive: true
+  jobActiveDeadlineSecs: 10800
+  version: v1.35.6+k3s1
   cordon: true
   nodeSelector:
     matchExpressions:
-      - key: node-role.kubernetes.io/master
+      - key: node-role.kubernetes.io/control-plane
         operator: In
         values:
           - "true"
-  tolerations:
-    - key: "node-role.kubernetes.io/master"
-      operator: "Exists"
   upgrade:
     image: rancher/k3s-upgrade
