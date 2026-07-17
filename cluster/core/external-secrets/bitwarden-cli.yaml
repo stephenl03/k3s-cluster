@@ -42,7 +42,7 @@ spec:
             - -c
             - |
               set -euo pipefail
-              bw config server "${BW_HOST}"
+              bw config server "$${BW_HOST}"
               bw login --apikey --raw >/dev/null
               export BW_SESSION="$(bw unlock --passwordenv BW_PASSWORD --raw)"
               bw unlock --check
