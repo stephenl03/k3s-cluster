@@ -17,7 +17,7 @@ spec:
       - key: kubernetes.io/hostname
         operator: In
         values:
-          - n4r.k8s.lazy.sh
+          - lnv-02.k8s.lazy.sh
   drain:
     ignoreDaemonSets: true
     deleteEmptydirData: true
