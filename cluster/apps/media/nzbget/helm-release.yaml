@@ -13,7 +13,7 @@ spec:
     spec:
       # renovate: registryUrl=https://bjw-s-labs.github.io/helm-charts/
       chart: app-template
-      version: 0.2.2
+      version: 5.0.1
       sourceRef:
         kind: HelmRepository
         name: bjw-s-charts
@@ -26,20 +26,36 @@ spec:
     remediation:
       retries: 5
   values:
-    image:
-      repository: lscr.io/linuxserver/nzbget
-      tag: latest
-    env:
-      TZ: "${TIMEZONE}"
+    controllers:
+      nzbget:
+        containers:
+          app:
+            image:
+              repository: lscr.io/linuxserver/nzbget
+              tag: latest
+            env:
+              TZ: "${TIMEZONE}"
+            resources:
+              requests:
+                memory: 300Mi
+                cpu: 100m
+              limits:
+                memory: 4000Mi
+    defaultPodOptions:
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
     service:
-      main:
+      app:
+        controller: *app
         ports:
           http:
             port: 6789
     ingress:
-      main:
-        enabled: true
-        ingressClassName: traefik
+      app:
+        className: traefik
         annotations:
           cert-manager.io/cluster-issuer: letsencrypt-production
           hajimari.io/enable: "true"
@@ -47,30 +63,22 @@ spec:
           hajimari.io/group: Media
           traefik.ingress.kubernetes.io/router.entrypoints: websecure
         hosts:
-        - host: &host "{{ .Release.Name }}.k8s.${SECRET_DOMAIN}"
-          paths:
-          - path: /
-            pathType: Prefix
+          - host: &host "{{ .Release.Name }}.k8s.${SECRET_DOMAIN}"
+            paths:
+              - path: /
+                service:
+                  identifier: app
+                  port: http
         tls:
-        - hosts:
-          - *host
-          secretName: nzbget-tls
-    podSecurityContext:
-      runAsUser: 1000
-      runAsGroup: 1000
-      fsGroup: 1000
-      fsGroupChangePolicy: OnRootMismatch
+          - hosts:
+              - *host
+            secretName: nzbget-tls
     persistence:
       config:
-        enabled: true
         existingClaim: *app
+        globalMounts:
+          - path: /config
       downloads:
-        enabled: true
-        mountPath: /downloads
         existingClaim: nzbget-downloads
-    resources:
-      requests:
-        memory: 300Mi
-        cpu: 100m
-      limits:
-        memory: 4000Mi
+        globalMounts:
+          - path: /downloads
