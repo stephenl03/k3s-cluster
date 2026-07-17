@@ -23,12 +23,11 @@ spec:
     remediation:
       retries: 5
   upgrade:
-    force: true
     remediation:
       retries: 5
   values:
     controllers:
-      nzbget:
+      app:
         containers:
           app:
             image:
@@ -50,7 +49,7 @@ spec:
         fsGroupChangePolicy: OnRootMismatch
     service:
       app:
-        controller: *app
+        controller: app
         ports:
           http:
             port: 6789
