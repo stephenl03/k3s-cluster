@@ -9,7 +9,7 @@ spec:
   concurrency: 1
   exclusive: true
   jobActiveDeadlineSecs: 10800
-  version: v1.32.13+k3s1
+  version: v1.33.13+k3s1
   nodeSelector:
     matchExpressions:
       - key: node-role.kubernetes.io/control-plane
@@ -17,7 +17,7 @@ spec:
       - key: kubernetes.io/hostname
         operator: In
         values:
-          - lnv-02.k8s.lazy.sh
+          - n4l.k8s.lazy.sh
   drain:
     ignoreDaemonSets: true
     deleteEmptydirData: true
