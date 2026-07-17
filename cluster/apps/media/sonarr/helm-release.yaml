@@ -5,7 +5,6 @@ metadata:
   name: &app sonarr
   namespace: media
 spec:
-  suspend: true
   dependsOn:
   - name: longhorn
     namespace: longhorn-system
