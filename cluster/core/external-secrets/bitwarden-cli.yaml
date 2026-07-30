@@ -42,6 +42,11 @@ spec:
             - -c
             - |
               set -euo pipefail
+              # The appdata emptyDir has pod lifetime, so a restarted container
+              # finds authenticated state from the previous run. `bw config
+              # server` and `bw login` both refuse to run in that state, which
+              # made any single restart permanently fatal. Clear it first.
+              bw logout >/dev/null 2>&1 || true
               bw config server "$${BW_HOST}"
               bw login --apikey --raw >/dev/null
               export BW_SESSION="$(bw unlock --passwordenv BW_PASSWORD --raw)"
@@ -94,14 +99,15 @@ spec:
             failureThreshold: 3
             periodSeconds: 10
             timeoutSeconds: 1
+          # Liveness must not depend on Bitwarden's cloud being reachable and
+          # fast. The previous probe POSTed /sync?force=true, so three slow
+          # upstream syncs in a six-minute window killed the container. Vault
+          # refresh now lives in the vault-sync sidecar, where failure is
+          # non-fatal.
           livenessProbe:
-            exec:
-              command:
-                - wget
-                - --quiet
-                - --output-document=/dev/null
-                - --post-data=
-                - http://127.0.0.1:8087/sync?force=true
+            httpGet:
+              path: /status
+              port: http
             failureThreshold: 3
             periodSeconds: 120
             timeoutSeconds: 10
@@ -116,6 +122,34 @@ spec:
               mountPath: /bitwarden
             - name: tmp
               mountPath: /tmp
+        # Refreshes the served vault cache so new and rotated Bitwarden items
+        # become visible to ESO. This was previously a side effect of the
+        # liveness probe; here a failed sync retries instead of killing the pod.
+        - name: vault-sync
+          # renovate: datasource=docker depName=ghcr.io/charlesthomas/bitwarden-cli
+          image: ghcr.io/charlesthomas/bitwarden-cli:2026.6.0@sha256:f8da73df51c6614b1439991a99132e3f1dfe3526a64978392650e72e82400398
+          imagePullPolicy: IfNotPresent
+          command:
+            - /bin/bash
+            - -c
+            - |
+              while true; do
+                sleep 600
+                wget --quiet --output-document=/dev/null --post-data= \
+                  "http://127.0.0.1:8087/sync?force=true" || true
+              done
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            readOnlyRootFilesystem: true
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              memory: 64Mi
       volumes:
         - name: appdata
           emptyDir:
