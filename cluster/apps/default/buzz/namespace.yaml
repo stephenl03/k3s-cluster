@@ -1,0 +1,9 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: buzz
+  labels:
+    # Required: the bitwarden-* ClusterSecretStores gate on this label via
+    # conditions.namespaceSelector. Without it ExternalSecrets here are ignored.
+    external-secrets.io/bitwarden-access: "true"

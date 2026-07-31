@@ -1,0 +1,207 @@
+---
+# S3-compatible object storage for the Buzz relay (media blobs + git objects).
+# RustFS rather than the chart's bundled MinIO because:
+#   - bundled MinIO is a hard template failure alongside secrets.existingSecret
+#   - its PVC has no storageClassName field at all, so it would inherit the
+#     cluster default rather than being pinned to longhorn
+#
+# RustFS is pre-GA (no stable release; 1.0.0-beta.12) with an active security
+# advisory history concentrated in its console and IAM layers. It is therefore
+# deliberately fenced: console disabled, no ingress, ClusterIP only, and a
+# NetworkPolicy limiting :9000 to the relay. Its conditional-write (CAS)
+# support — the one thing Buzz's startup conformance probe actually requires —
+# is lock-guarded and CI-gated against the Ceph s3-tests atomic suite.
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: rustfs
+spec:
+  dependsOn:
+    - name: longhorn
+      namespace: longhorn-system
+  interval: 15m
+  chart:
+    spec:
+      # renovate: registryUrl=https://charts.rustfs.com
+      chart: rustfs
+      # Pin explicitly: the repo publishes a parallel preview stream whose
+      # versions (1.0.0-beta.N-preview.M) sort ABOVE the stable 0.x chart, so
+      # an unpinned install silently resolves to a preview chart.
+      version: 0.12.0
+      sourceRef:
+        kind: HelmRepository
+        name: rustfs-charts
+        namespace: flux-system
+      interval: 15m
+  install:
+    remediation:
+      retries: 5
+  upgrade:
+    cleanupOnFail: true
+    remediation:
+      retries: 5
+  values:
+    replicaCount: 1
+    mode:
+      standalone:
+        enabled: true
+        strategy:
+          # RWO volume — never allow two pods to hold /data during a rollout.
+          type: Recreate
+      distributed:
+        # Must be set explicitly. The two mode flags are independent booleans,
+        # and distributed defaults to true, so omitting this renders BOTH a
+        # Deployment and a StatefulSet. Upstream also marks distributed mode
+        # "Under Testing".
+        enabled: false
+    pools:
+      enabled: false
+
+    image:
+      rustfs:
+        repository: rustfs/rustfs
+        tag: "1.0.0-beta.12"
+        pullPolicy: IfNotPresent
+      initImage:
+        repository: busybox
+        tag: "stable"
+        pullPolicy: IfNotPresent
+
+    secret:
+      existingSecret: rustfs-credentials
+      allowInsecureDefaults: false
+
+    config:
+      rustfs:
+        address: ":9000"
+        # String, not bool. Disables the console, which is where most of the
+        # project's critical advisories have landed.
+        console_enable: "false"
+        region: us-east-1
+        log_level: "info"
+        # Empty => log to stdout (picked up by promtail) and skip a second PVC.
+        obs_log_directory: ""
+        obs_environment: production
+
+    service:
+      type: ClusterIP
+      endpoint:
+        port: 9000
+      console:
+        port: 9001
+
+    # Chart default is TRUE, pointing at example.rustfs.com. Nothing outside
+    # the cluster should reach object storage directly.
+    ingress:
+      enabled: false
+    gatewayApi:
+      enabled: false
+    mtls:
+      enabled: false
+
+    storageclass:
+      name: longhorn
+      # Chart default is 256Mi.
+      dataStorageSize: 20Gi
+
+    resources:
+      requests:
+        cpu: 100m
+        memory: 512Mi
+      limits:
+        cpu: "2"
+        memory: 2Gi
+
+    podSecurityContext:
+      fsGroup: 10001
+      runAsUser: 10001
+      runAsGroup: 10001
+    containerSecurityContext:
+      capabilities:
+        drop:
+          - ALL
+      readOnlyRootFilesystem: true
+      allowPrivilegeEscalation: false
+      runAsNonRoot: true
+    serviceAccount:
+      create: true
+      automount: false
+
+    affinity: {}
+    pdb:
+      create: false
+---
+# The RustFS chart ships no bucket provisioning of any kind (zero Jobs in the
+# chart), and the relay's S3 conformance probe is startup-fatal, so the bucket
+# has to exist before Buzz starts. `mc` speaks RustFS's MinIO-compatible API.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: rustfs-create-bucket
+  labels:
+    app.kubernetes.io/name: rustfs-create-bucket
+    app.kubernetes.io/instance: rustfs
+spec:
+  backoffLimit: 10
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: rustfs-create-bucket
+        app.kubernetes.io/instance: rustfs
+    spec:
+      restartPolicy: OnFailure
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: mc
+          # renovate: datasource=docker depName=minio/mc
+          image: minio/mc:RELEASE.2025-08-13T08-35-41Z
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            readOnlyRootFilesystem: true
+          env:
+            - name: S3_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: rustfs-credentials
+                  key: RUSTFS_ACCESS_KEY
+            - name: S3_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: rustfs-credentials
+                  key: RUSTFS_SECRET_KEY
+          command:
+            - /bin/sh
+            - -c
+            - |
+              set -e
+              export MC_CONFIG_DIR=/tmp/.mc
+              until mc alias set rustfs \
+                  http://rustfs-svc.buzz.svc.cluster.local:9000 \
+                  "$S3_ACCESS_KEY" "$S3_SECRET_KEY" >/dev/null 2>&1; do
+                echo "waiting for rustfs..."; sleep 3
+              done
+              mc mb --ignore-existing rustfs/buzz-media
+              mc anonymous set none rustfs/buzz-media
+              echo "bucket buzz-media ready"
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              memory: 128Mi
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}

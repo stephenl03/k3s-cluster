@@ -1,0 +1,58 @@
+---
+# Object storage holds the relay's media blobs and git objects and has no
+# business being reachable from anywhere but the relay itself. RustFS is
+# pre-GA with a live advisory stream in its IAM layer, so this is defence in
+# depth rather than paranoia.
+#
+# Note k3s is provisioned with disable-network-policy: true, so enforcement
+# depends on the CNI actually installed — as with mempalace's policies, treat
+# this as documentation-as-code that becomes load-bearing if that changes.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: buzz-to-rustfs
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: rustfs
+      app.kubernetes.io/instance: rustfs
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: buzz
+              app.kubernetes.io/instance: buzz
+        # The bucket-creation Job also needs to reach the S3 API.
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: rustfs-create-bucket
+              app.kubernetes.io/instance: rustfs
+      ports:
+        - port: 9000
+          protocol: TCP
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: traefik-to-buzz
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: buzz
+      app.kubernetes.io/instance: buzz
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: traefik
+              app.kubernetes.io/instance: traefik-kube-system
+      ports:
+        - port: 3000
+          protocol: TCP

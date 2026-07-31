@@ -1,0 +1,145 @@
+---
+# Buzz publishes its chart to GHCR as an OCI artifact only — there is no classic
+# HTTP Helm repo, so this is the first OCIRepository in the cluster. Flux docs
+# put `HelmRepository` with `spec.type: oci` in maintenance mode (its
+# spec.interval is silently ignored), so use OCIRepository + chartRef instead.
+# Upstream's own examples/flux-helmrelease.yaml uses the deprecated form AND
+# pins a chart version that does not exist — do not copy it.
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: buzz
+spec:
+  interval: 15m
+  url: oci://ghcr.io/block/buzz/charts/buzz
+  layerSelector:
+    mediaType: application/vnd.cncf.helm.chart.content.v1.tar+gzip
+    operation: copy
+  ref:
+    tag: "0.1.7"
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app buzz
+spec:
+  dependsOn:
+    - name: longhorn
+      namespace: longhorn-system
+    # The relay's S3 conformance probe is startup-fatal, so object storage has
+    # to exist before the relay starts.
+    - name: rustfs
+  interval: 15m
+  chartRef:
+    kind: OCIRepository
+    name: *app
+  install:
+    remediation:
+      retries: 5
+  upgrade:
+    cleanupOnFail: true
+    remediation:
+      retries: 5
+  values:
+    replicaCount: 1
+    relayUrl: "wss://buzz.k8s.${SECRET_DOMAIN}"
+    # Stephen's Nostr pubkey — the relay operator/owner.
+    # npub1v9eecmzgzwgqvemjlknv6s6e2l8fkfhk5hgrjejf7qnshrtajq2qute8yq
+    # Required while relay.requireRelayMembership is true (the default, and
+    # what we want — false makes the relay open to anyone).
+    ownerPubkey: "61739c6c481390066772fda6cd435957ce9b26f6a5d0396649f0270b8d7d9014"
+
+    image:
+      # The chart's appVersion is a stale 0.1.0, and image.tag defaults to ""
+      # which falls back to it — so this MUST be pinned or you silently run a
+      # relay two releases old.
+      tag: "0.2.0"
+      pullPolicy: IfNotPresent
+
+    secrets:
+      existingSecret: buzz-secrets
+
+    relay:
+      extraEnv:
+        # Chart 0.1.7 has no s3.addressingStyle value (it exists only on the
+        # chart's main branch), so this is set directly. `path` is already the
+        # relay's compiled default; pinning it means a future default flip
+        # can't silently break RustFS, whose DNS only resolves the endpoint
+        # host, not <bucket>.<endpoint>.
+        - name: BUZZ_S3_ADDRESSING_STYLE
+          value: path
+      podAnnotations:
+        # The chart's own checksum/secret annotation hashes the chart-managed
+        # Secret, which does not render when existingSecret is set — so a
+        # rotated credential would never roll the pods without this.
+        secret.reloader.stakater.com/reload: buzz-secrets
+
+    postgresql:
+      enabled: true
+      auth:
+        database: buzz
+        username: buzz
+        # Must be overridden: the chart's default points at a chart-managed
+        # Secret that is not rendered when secrets.existingSecret is set.
+        existingSecret: buzz-secrets
+        secretKeys:
+          adminPasswordKey: postgres-password
+      persistence:
+        enabled: true
+        size: 20Gi
+        storageClass: longhorn
+      image:
+        imagePullPolicy: IfNotPresent
+
+    redis:
+      enabled: true
+      auth:
+        existingSecret: buzz-secrets
+        existingSecretPasswordKey: redis-password
+      persistence:
+        enabled: true
+        size: 4Gi
+        storageClass: longhorn
+      image:
+        pullPolicy: IfNotPresent
+
+    # Bundled MinIO is mutually exclusive with secrets.existingSecret (hard
+    # template failure), and its PVC cannot be given a storageClass at all.
+    # RustFS runs alongside instead — see rustfs.yaml.
+    minio:
+      enabled: false
+    s3:
+      # Note the "-svc" suffix: the RustFS chart hard-codes it on the Service
+      # name and there is no value to remove it.
+      endpoint: "http://rustfs-svc.buzz.svc.cluster.local:9000"
+      bucket: buzz-media
+
+    persistence:
+      git:
+        enabled: true
+        accessMode: ReadWriteOnce
+        storageClass: longhorn
+        size: 10Gi
+
+    # No-op at replicaCount 1 (the template already gates on >1 replicas), but
+    # explicit so a future scale-up doesn't silently start blocking node drains.
+    podDisruptionBudget:
+      enabled: false
+
+    ingress:
+      enabled: true
+      className: traefik
+      annotations:
+        cert-manager.io/cluster-issuer: letsencrypt-production
+        traefik.ingress.kubernetes.io/router.entrypoints: websecure
+      # No proxy-timeout annotations: upstream's examples are nginx-specific.
+      # The relay pings every 30s, well inside Traefik's 180s idleTimeout.
+      hosts:
+        - host: &host "buzz.k8s.${SECRET_DOMAIN}"
+          paths:
+            - path: /
+              pathType: Prefix
+      tls:
+        - hosts:
+            - *host
+          secretName: buzz-tls
