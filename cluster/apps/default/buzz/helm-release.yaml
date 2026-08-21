@@ -60,7 +60,16 @@ spec:
       # The chart's appVersion is a stale 0.1.0, and image.tag defaults to ""
       # which falls back to it — so this MUST be pinned or you silently run a
       # relay two releases old.
-      tag: "0.2.0"
+      #
+      # 0.2.1, not 0.2.0: the chart's pairing-relay template execs
+      # /usr/local/bin/buzz-pair-relay, and that binary does not exist in the
+      # 0.2.0 image (which ships only buzz-admin and buzz-relay), so the
+      # pairing pod died with exit 128 / StartError before running any code.
+      # 0.2.1 ships it. Verified identical digest to :latest —
+      # sha256:4e31b7c7abb7d00b6f513dc559e58d2b980416f1dc400aa01bcf762cf2989cfc
+      # One image serves both Deployments; there is no pairingRelay.image
+      # override, so the main relay necessarily moves with it.
+      tag: "0.2.1"
       pullPolicy: IfNotPresent
 
     secrets:
