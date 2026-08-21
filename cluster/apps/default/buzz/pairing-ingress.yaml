@@ -1,0 +1,40 @@
+---
+# The Buzz chart renders the pairing relay as a ClusterIP Service only — its
+# ingress template (templates/ingress.yaml) has no pairing branch at all — so
+# without this manifest `pairingRelay.enabled: true` yields a pod nothing can
+# reach, and the QR-code pairing flow still fails.
+#
+# A dedicated host rather than a /pair path on buzz.k8s.$SECRET_DOMAIN: the
+# main ingress already claims "/" Prefix, and buzz-pair-relay is a separate
+# process binding 0.0.0.0:5000 that serves its own root. Traefik does not strip
+# prefixes by default, so path-based routing would additionally need a
+# StripPrefix Middleware (the cluster defines none today). external-dns-unifi
+# creates the record from this object, and letsencrypt-production issues the
+# cert over Cloudflare DNS-01, so a new host costs nothing operationally.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: buzz-pairing
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-production
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+spec:
+  ingressClassName: traefik
+  rules:
+    # Service name is {{ include "buzz.fullname" . }}-pairing; the release is
+    # named `buzz`, so it renders as `buzz-pairing` on chart-declared port 5000
+    # (pairingRelay.service.port).
+    - host: &pairhost "buzz-pair.k8s.${SECRET_DOMAIN}"
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: buzz-pairing
+                port:
+                  number: 5000
+  tls:
+    - hosts:
+        - *pairhost
+      secretName: buzz-pairing-tls

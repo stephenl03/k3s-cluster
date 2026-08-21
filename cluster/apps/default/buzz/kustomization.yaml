@@ -7,4 +7,5 @@ resources:
   - external-secrets.yaml
   - rustfs.yaml
   - helm-release.yaml
+  - pairing-ingress.yaml
   - network-policy.yaml

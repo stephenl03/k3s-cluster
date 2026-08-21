@@ -141,6 +141,21 @@ spec:
     podDisruptionBudget:
       enabled: false
 
+    # ── Device pairing relay ────────────────────────────────────────────────
+    # Off by default in the chart. Without it the relay publishes no pairing
+    # URL in NIP-11, so Buzz clients fall back to the legacy same-host /pair
+    # convention and the QR-code flow 404s. `url` is mandatory when enabled
+    # (_validate.tpl hard-fails otherwise); it is injected into the main relay
+    # as BUZZ_PAIRING_RELAY_URL and is what clients actually dial.
+    #
+    # The chart renders only a ClusterIP Service for this — its ingress
+    # template has no pairing branch — so external routing is added by hand in
+    # pairing-ingress.yaml. A dedicated host avoids a StripPrefix middleware,
+    # since the standalone buzz-pair-relay serves its own root, not /pair.
+    pairingRelay:
+      enabled: true
+      url: "wss://buzz-pair.k8s.${SECRET_DOMAIN}"
+
     ingress:
       enabled: true
       className: traefik

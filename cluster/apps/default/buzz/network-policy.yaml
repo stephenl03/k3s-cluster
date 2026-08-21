@@ -56,3 +56,10 @@ spec:
       ports:
         - port: 3000
           protocol: TCP
+        # buzz.pairingRelaySelectorLabels is buzz.selectorLabels plus
+        # component: pairing-relay, so the pairing pod carries the same
+        # name/instance labels this policy selects on and is captured by it.
+        # Without 5000 here the pairing relay is selected but unreachable.
+        # Harmless on the main relay pod, which listens on 3000/8080/9102.
+        - port: 5000
+          protocol: TCP
