@@ -76,6 +76,16 @@ spec:
       existingSecret: buzz-secrets
 
     relay:
+      # Restricts NIP-42 pubkey-only connections to pubkeys present in the
+      # `pubkey_allowlist` TABLE — this flag is only the on/off switch, the
+      # allowlist itself lives in Postgres. Enabling it against an empty table
+      # locks out every pubkey-only client, so the owner key was inserted
+      # first. Note pubkey_allowlist.pubkey is BYTEA (relay_members.pubkey is
+      # TEXT), so rows must be written with decode(<hex>,'hex') or you silently
+      # store the ASCII of the hex string and match nothing.
+      # Holders of a valid API token bypass the allowlist entirely.
+      pubkeyAllowlist: true
+
       extraEnv:
         # Chart 0.1.7 has no s3.addressingStyle value (it exists only on the
         # chart's main branch), so this is set directly. `path` is already the
