@@ -25,7 +25,7 @@ spec:
     # named `buzz`, so it renders as `buzz-pairing` on chart-declared port 5000
     # (pairingRelay.service.port).
     - host: &pairhost "buzz-pair.k8s.${SECRET_DOMAIN}"
-      http:
+      http: &pairpaths
         paths:
           - path: /
             pathType: Prefix
@@ -34,7 +34,13 @@ spec:
                 name: buzz-pairing
                 port:
                   number: 5000
+    # Public tunnel name. cloudflared preserves the original Host header, so
+    # Traefik needs its own router for it; a Host rewrite would break NIP-42
+    # host binding on the relay side.
+    - host: &pairpubhost "buzz-pair.${SECRET_DOMAIN}"
+      http: *pairpaths
   tls:
     - hosts:
         - *pairhost
+        - *pairpubhost
       secretName: buzz-pairing-tls

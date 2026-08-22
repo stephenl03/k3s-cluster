@@ -188,12 +188,23 @@ spec:
         traefik.ingress.kubernetes.io/router.entrypoints: websecure
       # No proxy-timeout annotations: upstream's examples are nginx-specific.
       # The relay pings every 30s, well inside Traefik's 180s idleTimeout.
+      # Both the LAN name and the public tunnel name. cloudflared forwards the
+      # ORIGINAL Host header (buzz.${SECRET_DOMAIN}), so Traefik needs a router
+      # for it or every tunnelled request 404s at the origin. Rewriting the Host
+      # to the internal name would fix routing but break NIP-42: the relay
+      # derives the expected AUTH relay URL from the host the connection arrived
+      # on, so the rewritten name would no longer match what the client signed.
       hosts:
         - host: &host "buzz.k8s.${SECRET_DOMAIN}"
+          paths:
+            - path: /
+              pathType: Prefix
+        - host: &pubhost "buzz.${SECRET_DOMAIN}"
           paths:
             - path: /
               pathType: Prefix
       tls:
         - hosts:
             - *host
+            - *pubhost
           secretName: buzz-tls
