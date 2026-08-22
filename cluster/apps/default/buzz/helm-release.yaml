@@ -173,7 +173,12 @@ spec:
     # since the standalone buzz-pair-relay serves its own root, not /pair.
     pairingRelay:
       enabled: true
-      url: "wss://buzz-pair.k8s.${SECRET_DOMAIN}"
+      # Public tunnel hostname, not the internal one. This value is what the
+      # relay publishes as pairing_relay_url in NIP-11, and NIP-11 has exactly
+      # one slot -- an internal-only name would be unreachable for a phone off
+      # the LAN. Resolves through Cloudflare from anywhere; the LAN hairpin is
+      # irrelevant for a brief one-shot pairing exchange.
+      url: "wss://buzz-pair.${SECRET_DOMAIN}"
 
     ingress:
       enabled: true
