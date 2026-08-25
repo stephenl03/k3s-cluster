@@ -47,6 +47,25 @@ spec:
     cleanupOnFail: true
     remediation:
       retries: 2
+  # The chart HARDCODES strategy RollingUpdate/maxSurge 1/maxUnavailable 0 in
+  # templates/deployment.yaml with no value to override it. That deadlocks
+  # against the ReadWriteOnce git PVC: the new pod cannot attach the volume
+  # until the old one releases it, and maxUnavailable 0 will not release the
+  # old one until the new pod is Ready. Earlier upgrades only survived by
+  # chance, when the replacement happened to land on the node already holding
+  # the volume; a cross-node reschedule hangs forever on Multi-Attach error.
+  # Recreate is the correct strategy for a single-replica RWO deployment.
+  postRenderers:
+    - kustomize:
+        patches:
+          - target:
+              kind: Deployment
+              name: buzz
+            patch: |
+              - op: replace
+                path: /spec/strategy
+                value:
+                  type: Recreate
   values:
     replicaCount: 1
     # Single canonical hostname, resolved identically inside and outside: one
