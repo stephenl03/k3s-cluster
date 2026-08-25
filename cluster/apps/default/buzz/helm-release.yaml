@@ -49,7 +49,18 @@ spec:
       retries: 2
   values:
     replicaCount: 1
-    relayUrl: "wss://buzz.k8s.${SECRET_DOMAIN}"
+    # Single canonical hostname, resolved identically inside and outside: one
+    # public proxied CNAME onto the cloudflared tunnel, no split-horizon entry.
+    # The relay is multi-tenant and keys the tenant off `communities.host`,
+    # which holds exactly ONE host per community — so it can serve only one
+    # name, and that name has to be the externally reachable one. The row was
+    # updated to buzz.${SECRET_DOMAIN} in place, preserving the community id
+    # and its relay_members.
+    #
+    # This value only supplies the ws/wss scheme to NIP-42 verification;
+    # nip42_expected_relay_url builds the expected URL from the arrival host,
+    # not from here. Kept in sync anyway so the two never read as disagreeing.
+    relayUrl: "wss://buzz.${SECRET_DOMAIN}"
     # Stephen's Nostr pubkey — the relay operator/owner.
     # npub1v9eecmzgzwgqvemjlknv6s6e2l8fkfhk5hgrjejf7qnshrtajq2qute8yq
     # Required while relay.requireRelayMembership is true (the default, and
