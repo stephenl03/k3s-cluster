@@ -23,6 +23,7 @@ kind: HelmRelease
 metadata:
   name: &app buzz
 spec:
+  suspend: true  # buzz decommissioned 2026-10-26; PVCs kept. Do not remove this HelmRelease from git while prune is on (helm uninstall would delete chart-rendered PVCs).
   dependsOn:
     - name: longhorn
       namespace: longhorn-system
