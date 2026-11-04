@@ -1,0 +1,68 @@
+---
+# NVIDIA OpenShell gateway. Chart is published to GHCR as OCI only, so use
+# OpenShell's own OCIRepository + chartRef (same pattern as buzz).
+# Requires the Agent Sandbox controller/CRD from cluster/core/agent-sandbox.
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: openshell
+spec:
+  interval: 15m
+  url: oci://ghcr.io/nvidia/openshell/helm-chart
+  layerSelector:
+    mediaType: application/vnd.cncf.helm.chart.content.v1.tar+gzip
+    operation: copy
+  ref:
+    tag: "0.1.7"
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app openshell
+spec:
+  dependsOn:
+    - name: longhorn
+      namespace: longhorn-system
+  interval: 15m
+  chartRef:
+    kind: OCIRepository
+    name: *app
+  install:
+    # A failed first install must stay put for inspection: an uninstall would
+    # discard the generated PKI and the SQLite PVC.
+    timeout: 10m
+    remediation:
+      retries: 0
+  upgrade:
+    timeout: 10m
+    cleanupOnFail: true
+    remediation:
+      retries: 2
+  values:
+    server:
+      telemetryEnabled: false
+      # Both immutable after install (StatefulSet volumeClaimTemplate).
+      dataStorageClass: longhorn
+      dataStorageSize: 2Gi
+      workspaceStorageClass: longhorn
+      workspaceDefaultStorageSize: 5Gi
+      # Access model: NO Ingress, NO LoadBalancer — the Service stays
+      # ClusterIP and the only way in is `kubectl -n openshell port-forward
+      # svc/openshell 8080:8080` from the Mac (kubeconfig is the auth
+      # boundary). Per the OpenShell access-control doc, plaintext +
+      # unauthenticated users is only acceptable when the gateway is not
+      # reachable from outside a trusted environment; network-policy.yaml
+      # closes it to the rest of the cluster. Sandbox supervisors still
+      # authenticate with gateway-minted JWTs. Never expose this Service.
+      disableTls: true
+    gatewayConfig:
+      openshell:
+        version: 2
+      openshell.gateway.auth:
+        allow_unauthenticated_users: true
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
+        memory: 1Gi

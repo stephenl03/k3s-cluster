@@ -1,0 +1,21 @@
+---
+# The gateway runs plaintext with unauthenticated users (see helm-release.yaml),
+# so anything that can open a TCP connection to it can drive it. Restrict
+# ingress to pods in this namespace (sandboxes, supervisor, peers). kubectl
+# port-forward enters via the pod's own network namespace and kubelet probes
+# come from the node, neither of which this policy blocks.
+# k3s kube-router enforces NetworkPolicy here (verified 2026-11-04).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: openshell-gateway-ingress
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: openshell
+      app.kubernetes.io/instance: openshell
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector: {}

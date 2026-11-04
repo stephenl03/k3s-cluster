@@ -1,0 +1,10 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: openshell
+  labels:
+    # Warn only: sandbox workloads are created by the gateway with the
+    # supervisor's own securityContext, so enforce=restricted could reject
+    # them. Warnings surface any drift without blocking.
+    pod-security.kubernetes.io/warn: restricted
