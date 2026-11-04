@@ -1,0 +1,14 @@
+---
+# Kubernetes Agent Sandbox controller + Sandbox CRD (agents.x-k8s.io), the
+# cluster-scoped dependency of OpenShell (cluster/apps/default/openshell). The
+# OpenShell chart does not install it and its preflight fails the release when
+# the Sandbox API is not served.
+#
+# Only the core sandbox.yaml: OpenShell's RBAC touches sandboxes and
+# sandboxes/status only, so the release's extensions.yaml (SandboxTemplate,
+# SandboxClaim, SandboxWarmPool) is not needed. Pinned; upstream docs use
+# releases/latest, which would drift silently.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - https://github.com/kubernetes-sigs/agent-sandbox/releases/download/v1.0.9/sandbox.yaml

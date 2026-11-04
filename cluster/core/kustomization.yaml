@@ -9,3 +9,4 @@ resources:
   - system-upgrade
   - node-feature-discovery
   - intel-device-plugin-operator
+  - agent-sandbox
