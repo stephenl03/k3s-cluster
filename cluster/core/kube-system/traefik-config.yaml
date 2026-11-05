@@ -1,0 +1,19 @@
+---
+# Overrides for the k3s-bundled Traefik (HelmChart kube-system/traefik).
+# websecure readTimeout: Traefik v3 defaults to 60s, which resets long-lived
+# client-streaming gRPC calls (e.g. `openshell sandbox exec` with stdin,
+# `sandbox connect`) after a minute. 0s = no limit on reading a request body.
+# Verified 2026-11-05: stdin stream cut at ~70s through Traefik, fine via
+# port-forward.
+apiVersion: helm.cattle.io/v1
+kind: HelmChartConfig
+metadata:
+  name: traefik
+  namespace: kube-system
+spec:
+  valuesContent: |-
+    ports:
+      websecure:
+        transport:
+          respondingTimeouts:
+            readTimeout: 0s
