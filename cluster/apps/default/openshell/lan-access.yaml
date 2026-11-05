@@ -35,8 +35,15 @@ spec:
   ca:
     secretName: openshell-lan-ca
 ---
-# Client cert for the Mac. Extract tls.crt/tls.key into
-# ~/.config/openshell/gateways/lan/mtls/ (see README.md).
+# Client cert for the Mac. CLI setup (openshell 0.1.7 reads
+# ~/.config/openshell/gateways/<name>/mtls/{ca.crt,tls.crt,tls.key}; ca.crt
+# must verify the SERVER cert, i.e. ISRG Root X1/X2 for Let's Encrypt):
+#   M=~/.config/openshell/gateways/lan/mtls; mkdir -p $M; umask 077
+#   kubectl -n openshell get secret openshell-client-mac -o jsonpath='{.data.tls\.crt}' | base64 -d > $M/tls.crt
+#   kubectl -n openshell get secret openshell-client-mac -o jsonpath='{.data.tls\.key}' | base64 -d > $M/tls.key
+#   <ISRG Root X1 + X2 PEMs> > $M/ca.crt
+#   openshell gateway add https://openshell.k8s.<domain> --local --name lan
+# cert-manager renews the Secret 30 days before expiry; re-extract tls.crt/key then.
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
