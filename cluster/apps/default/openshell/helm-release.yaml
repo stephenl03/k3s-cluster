@@ -46,36 +46,20 @@ spec:
       dataStorageSize: 2Gi
       workspaceStorageClass: longhorn
       workspaceDefaultStorageSize: 5Gi
-      # Access model (2026-11-05): HTTPS + mTLS on the home LAN only.
-      # service-lan.yaml exposes the gateway on a MetalLB IP restricted to
-      # 172.16.10.0/24 as openshell.k8s.${SECRET_DOMAIN}. The gateway terminates
-      # TLS itself and requires a client cert signed by the chart CA
-      # (openshell-client-tls); with a client CA and no OIDC issuer the gateway
-      # maps the verified cert to a user (mTLS auth defaults on).
-      disableTls: false
-      tls:
-        enableMtls: true
-    # cert-manager owns TLS (the certgen hook then only makes the JWT keys).
-    # Two server certs, picked by SNI: an internal one from the chart's own CA
-    # for in-cluster names (supervisor callbacks verify it against that CA), and
-    # an external Let's Encrypt one (DNS-01 via Cloudflare) for the LAN
-    # hostname, so the CLI's server verification uses public roots.
-    # Never point grpc_endpoint at the external hostname.
-    certManager:
-      enabled: true
-      serverIssuerRef:
-        name: letsencrypt-production
-        kind: ClusterIssuer
-        group: cert-manager.io
-      serverDnsNames:
-        - openshell.k8s.${SECRET_DOMAIN}
+      # Access model (2026-11-05): the gateway stays plaintext h2c on its
+      # ClusterIP Service. Traefik terminates TLS (ALPN h2, Let's Encrypt) for
+      # openshell.k8s.${SECRET_DOMAIN} and REQUIRES a client certificate from
+      # the openshell-lan CA (lan-access.yaml), then forwards h2c here.
+      # Unauthenticated users are accepted because the Traefik client-cert
+      # check is the auth boundary; network-policy.yaml only lets Traefik and
+      # pods in this namespace reach the gateway. kubectl port-forward still
+      # works for break-glass access. Do not expose this Service any other way.
+      disableTls: true
     gatewayConfig:
       openshell:
         version: 2
-      # Unauthenticated users are now rejected: a CLI without a valid client
-      # cert gets nothing.
       openshell.gateway.auth:
-        allow_unauthenticated_users: false
+        allow_unauthenticated_users: true
     resources:
       requests:
         cpu: 100m

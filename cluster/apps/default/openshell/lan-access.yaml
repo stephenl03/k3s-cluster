@@ -1,0 +1,121 @@
+---
+# LAN access through Traefik (websecure :443 on 172.16.50.200):
+#   client --TLS (ALPN h2, LE cert, client cert REQUIRED)--> Traefik --h2c--> openshell:8080
+# Client certs come from a private CA that exists only for this purpose
+# (separate from the chart's sandbox PKI). Issue one Certificate per machine.
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: openshell-lan-selfsigned
+spec:
+  selfSigned: {}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: openshell-lan-ca
+spec:
+  isCA: true
+  commonName: openshell-lan-client-ca
+  secretName: openshell-lan-ca
+  duration: 87600h # 10y
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+  issuerRef:
+    name: openshell-lan-selfsigned
+    kind: Issuer
+    group: cert-manager.io
+---
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: openshell-lan-ca
+spec:
+  ca:
+    secretName: openshell-lan-ca
+---
+# Client cert for the Mac. Extract tls.crt/tls.key into
+# ~/.config/openshell/gateways/lan/mtls/ (see README.md).
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: openshell-client-mac
+spec:
+  commonName: stephen-mac
+  secretName: openshell-client-mac
+  duration: 8760h
+  renewBefore: 720h
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+  usages:
+    - client auth
+    - digital signature
+  issuerRef:
+    name: openshell-lan-ca
+    kind: Issuer
+    group: cert-manager.io
+---
+# Traefik verifies client certs against ca.crt of the openshell-lan-ca Secret.
+# TLS options bind per SNI host, so only openshell.k8s.* is affected.
+apiVersion: traefik.io/v1alpha1
+kind: TLSOption
+metadata:
+  name: lan-mtls
+spec:
+  minVersion: VersionTLS12
+  alpnProtocols:
+    - h2
+    - http/1.1
+  clientAuth:
+    clientAuthType: RequireAndVerifyClientCert
+    secretNames:
+      - openshell-lan-ca
+---
+# Extra Service so Traefik talks h2c to the gateway (the chart's Service
+# takes no annotations). Same selector/port as the chart Service.
+apiVersion: v1
+kind: Service
+metadata:
+  name: openshell-h2c
+  annotations:
+    traefik.ingress.kubernetes.io/service.serversscheme: h2c
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: openshell
+    app.kubernetes.io/instance: openshell
+  ports:
+    - name: grpc
+      port: 8080
+      targetPort: grpc
+      protocol: TCP
+---
+# Plain Ingress (not IngressRoute) so external-dns-unifi creates the record.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: openshell
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-production"
+    traefik.ingress.kubernetes.io/router.entrypoints: "websecure"
+    traefik.ingress.kubernetes.io/router.tls: "true"
+    traefik.ingress.kubernetes.io/router.tls.options: "openshell-lan-mtls@kubernetescrd"
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - "openshell.k8s.${SECRET_DOMAIN}"
+      secretName: "openshell-lan-tls"
+  rules:
+    - host: "openshell.k8s.${SECRET_DOMAIN}"
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: openshell-h2c
+                port:
+                  number: 8080
