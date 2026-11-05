@@ -1,0 +1,28 @@
+---
+# LAN entry point for the OpenShell gateway: HTTPS + mTLS terminated by the
+# gateway pod itself (no Traefik, which would strip the client cert).
+# Only the home LAN 172.16.10.0/24 may connect (loadBalancerSourceRanges and
+# network-policy.yaml). externalTrafficPolicy Local keeps the client source IP
+# so the NetworkPolicy ipBlock can match it. external-dns-unifi (upsert-only)
+# creates the UDM record for the hostname annotation.
+apiVersion: v1
+kind: Service
+metadata:
+  name: openshell-lan
+  annotations:
+    metallb.io/loadBalancerIPs: 172.16.50.210
+    external-dns.alpha.kubernetes.io/hostname: openshell.k8s.${SECRET_DOMAIN}
+spec:
+  type: LoadBalancer
+  externalTrafficPolicy: Local
+  loadBalancerSourceRanges:
+    - 172.16.10.0/24
+  selector:
+    app.kubernetes.io/name: openshell
+    app.kubernetes.io/instance: openshell
+  ports:
+    - name: grpc
+      port: 8080
+      targetPort: grpc
+      protocol: TCP
+      appProtocol: grpc

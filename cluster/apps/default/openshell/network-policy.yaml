@@ -1,9 +1,10 @@
 ---
-# The gateway runs plaintext with unauthenticated users (see helm-release.yaml),
-# so anything that can open a TCP connection to it can drive it. Restrict
-# ingress to pods in this namespace (sandboxes, supervisor, peers). kubectl
-# port-forward enters via the pod's own network namespace and kubelet probes
-# come from the node, neither of which this policy blocks.
+# Gateway ingress: pods in this namespace (sandboxes, supervisors, peers) plus
+# the home LAN 172.16.10.0/24 on the gateway port via service-lan.yaml. The
+# LAN path is HTTPS with mandatory client certs (see helm-release.yaml); the
+# rest of the cluster stays blocked. kubectl port-forward enters via the pod's
+# own network namespace and kubelet probes come from the node, neither of which
+# this policy blocks.
 # k3s kube-router enforces NetworkPolicy here (verified 2026-11-04).
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
@@ -19,3 +20,9 @@ spec:
   ingress:
     - from:
         - podSelector: {}
+    - from:
+        - ipBlock:
+            cidr: 172.16.10.0/24
+      ports:
+        - protocol: TCP
+          port: 8080
