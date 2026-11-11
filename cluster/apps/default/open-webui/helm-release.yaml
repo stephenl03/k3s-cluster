@@ -84,6 +84,30 @@ spec:
       host: "openwebui.k8s.${SECRET_DOMAIN}"
       tls: true
       existingSecret: open-webui-tls
+    # Chart sets no probes by default, so the pod went Ready while the app
+    # was still downloading its embedding model and Traefik returned 502.
+    # startupProbe allows ~10 min (60 x 10s) for first boot.
+    startupProbe:
+      httpGet:
+        path: /health
+        port: http
+      periodSeconds: 10
+      timeoutSeconds: 5
+      failureThreshold: 60
+    readinessProbe:
+      httpGet:
+        path: /health
+        port: http
+      periodSeconds: 10
+      timeoutSeconds: 5
+      failureThreshold: 3
+    livenessProbe:
+      httpGet:
+        path: /health
+        port: http
+      periodSeconds: 30
+      timeoutSeconds: 5
+      failureThreshold: 5
     resources:
       requests:
         cpu: 100m
