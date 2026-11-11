@@ -71,6 +71,16 @@ spec:
             key: WEBUI_SECRET_KEY
       - name: TZ
         value: "${TIMEZONE}"
+      # Web search via the in-cluster SearXNG (cluster/apps/default/searxng).
+      # PersistentConfig: 0.13.x seeds every config key into the DB on first
+      # boot, so these only apply to a fresh DB; afterwards the DB value (and
+      # anything saved in Admin > Settings > Web Search) wins over env.
+      - name: ENABLE_WEB_SEARCH
+        value: "true"
+      - name: WEB_SEARCH_ENGINE
+        value: searxng
+      - name: SEARXNG_QUERY_URL
+        value: "http://searxng.searxng.svc.cluster.local:8080/search?q=<query>"
     persistence:
       enabled: true
       storageClass: longhorn
