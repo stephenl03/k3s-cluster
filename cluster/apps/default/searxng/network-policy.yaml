@@ -1,0 +1,33 @@
+---
+# Only the k3s Traefik pods (LAN ingress) and Open WebUI (in-cluster web
+# search via the Service) may reach the SearXNG HTTP port. Egress is left open
+# (no default-deny in this cluster): SearXNG needs DNS and the internet to query
+# its engines. kubelet probes come from the node and are not blocked.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-searxng-clients
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: searxng
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: traefik
+              app.kubernetes.io/instance: traefik-kube-system
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: open-webui
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/component: open-webui
+      ports:
+        - protocol: TCP
+          port: 8080

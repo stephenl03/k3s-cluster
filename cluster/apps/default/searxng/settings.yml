@@ -1,0 +1,55 @@
+---
+# SearXNG settings, migrated from the fedora POC (podman container "searxng").
+# Only overrides are listed; everything else comes from the image defaults.
+# server.secret_key comes from the SEARXNG_SECRET env var (SOPS Secret), and
+# the Brave Search API key placeholder below is filled in by the
+# render-settings initContainer from the same Secret.
+use_default_settings: true
+
+general:
+  instance_name: "SearXNG"
+
+search:
+  autocomplete: ""
+  # json is required by Open WebUI and other API clients.
+  formats:
+    - html
+    - json
+  # Back off longer than the defaults when an engine blocks us.
+  suspended_times:
+    SearxEngineAccessDenied: 86400
+    SearxEngineCaptcha: 86400
+    SearxEngineTooManyRequests: 3600
+
+server:
+  base_url: "https://searxng.k8s.${SECRET_DOMAIN}/"
+  # LAN-only instance: no bot limiter, so no valkey/redis needed.
+  limiter: false
+  public_instance: false
+  image_proxy: false
+
+outgoing:
+  pool_maxsize: 20
+
+engines:
+  # Brave Search API: the only engine that reliably returned results on the
+  # fedora POC (scrapers there were suspended for CAPTCHA/access denied).
+  - name: braveapi
+    api_key: "__BRAVE_API_KEY__"
+    inactive: false
+  # Engine choices carried over from the fedora POC.
+  - name: google
+    disabled: false
+  - name: google images
+    disabled: false
+  - name: duckduckgo images
+    disabled: true
+  - name: duckduckgo news
+    disabled: true
+  - name: duckduckgo videos
+    disabled: true
+  # Tor-only engines: they fail to load without a Tor proxy and log errors.
+  - name: ahmia
+    inactive: true
+  - name: torch
+    inactive: true
