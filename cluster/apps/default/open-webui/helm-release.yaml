@@ -1,0 +1,92 @@
+---
+# Open WebUI chat front end for the Mac Studio llama.cpp server.
+# Chart is published to GHCR as OCI, so use OCIRepository + chartRef.
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: open-webui
+spec:
+  interval: 15m
+  url: oci://ghcr.io/open-webui/helm-charts/open-webui
+  layerSelector:
+    mediaType: application/vnd.cncf.helm.chart.content.v1.tar+gzip
+    operation: copy
+  ref:
+    tag: "18.0.0"
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app open-webui
+spec:
+  dependsOn:
+    - name: longhorn
+      namespace: longhorn-system
+  interval: 15m
+  chartRef:
+    kind: OCIRepository
+    name: *app
+  install:
+    timeout: 10m
+    remediation:
+      retries: 3
+  upgrade:
+    timeout: 10m
+    cleanupOnFail: true
+    remediation:
+      retries: 3
+  values:
+    image:
+      repository: ghcr.io/open-webui/open-webui
+      tag: 0.13.3@sha256:46b59158e6558eeb980bc828e0f1b30238ad24d82ed84d5e5eda1dab2a082f14
+    annotations:
+      reloader.stakater.com/auto: "true"
+    ollama:
+      enabled: false
+    pipelines:
+      enabled: false
+    tika:
+      enabled: false
+    # Single replica: in-memory websocket manager, no bundled Redis.
+    websocket:
+      enabled: true
+      manager: ""
+      redis:
+        enabled: false
+    # Mac Studio llama.cpp server (OpenAI-compatible, model alias "qwen").
+    # Key comes from the SOPS-encrypted open-webui-secret (secrets.sops.yaml).
+    enableOpenaiApi: true
+    openaiBaseApiUrl: "http://172.16.10.56:8000/v1"
+    openaiApiKey: ""
+    openaiApiKeyExistingSecret: open-webui-secret
+    openaiApiKeyExistingSecretKey: OPENAI_API_KEY
+    extraEnvVars:
+      - name: WEBUI_URL
+        value: "https://openwebui.k8s.${SECRET_DOMAIN}"
+      # Stable session signing key (otherwise regenerated on pod restart).
+      - name: WEBUI_SECRET_KEY
+        valueFrom:
+          secretKeyRef:
+            name: open-webui-secret
+            key: WEBUI_SECRET_KEY
+      - name: TZ
+        value: "${TIMEZONE}"
+    persistence:
+      enabled: true
+      storageClass: longhorn
+      size: 10Gi
+    ingress:
+      enabled: true
+      class: traefik
+      annotations:
+        cert-manager.io/cluster-issuer: letsencrypt-production
+        traefik.ingress.kubernetes.io/router.entrypoints: websecure
+      host: "openwebui.k8s.${SECRET_DOMAIN}"
+      tls: true
+      existingSecret: open-webui-tls
+    resources:
+      requests:
+        cpu: 100m
+        memory: 512Mi
+      limits:
+        memory: 2Gi
