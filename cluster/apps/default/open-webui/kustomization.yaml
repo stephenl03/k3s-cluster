@@ -7,3 +7,13 @@ resources:
   - secrets.sops.yaml
   - helm-release.yaml
   - network-policy.yaml
+# ComfyUI txt2img workflow for image generation (fed to COMFYUI_WORKFLOW /
+# COMFYUI_WORKFLOW_NODES). Fixed name because the HelmRelease references it;
+# Reloader rolls the pod when it changes.
+configMapGenerator:
+  - name: open-webui-comfyui-workflow
+    files:
+      - comfyui-workflow.json
+      - comfyui-workflow-nodes.json
+    options:
+      disableNameSuffixHash: true

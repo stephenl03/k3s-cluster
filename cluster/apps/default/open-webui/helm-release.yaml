@@ -81,6 +81,32 @@ spec:
         value: searxng
       - name: SEARXNG_QUERY_URL
         value: "http://searxng.searxng.svc.cluster.local:8080/search?q=<query>"
+      # Image generation via ComfyUI on fedora (comfyui-nvidia, RTX 3070).
+      # Z-Image Turbo: 8 steps, cfg 1, ~15 s per 1024x1024 image. Same
+      # PersistentConfig caveat as web search: env only seeds a fresh DB.
+      # Workflow + node mapping live in comfyui-workflow*.json (ConfigMap).
+      - name: ENABLE_IMAGE_GENERATION
+        value: "true"
+      - name: IMAGE_GENERATION_ENGINE
+        value: comfyui
+      - name: COMFYUI_BASE_URL
+        value: "http://fedora.lazy.sh:8189"
+      - name: IMAGE_GENERATION_MODEL
+        value: "Z-Image/z_image_turbo_bf16.safetensors"
+      - name: IMAGE_SIZE
+        value: "1024x1024"
+      - name: IMAGE_STEPS
+        value: "8"
+      - name: COMFYUI_WORKFLOW
+        valueFrom:
+          configMapKeyRef:
+            name: open-webui-comfyui-workflow
+            key: comfyui-workflow.json
+      - name: COMFYUI_WORKFLOW_NODES
+        valueFrom:
+          configMapKeyRef:
+            name: open-webui-comfyui-workflow
+            key: comfyui-workflow-nodes.json
     persistence:
       enabled: true
       storageClass: longhorn
