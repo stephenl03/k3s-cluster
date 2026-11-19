@@ -62,7 +62,8 @@ spec:
         allow_unauthenticated_users: true
     resources:
       requests:
-        cpu: 100m
-        memory: 256Mi
+        cpu: 250m
+        memory: 512Mi
       limits:
-        memory: 1Gi
+        cpu: "1"
+        memory: 1536Mi
