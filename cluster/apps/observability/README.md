@@ -7,7 +7,7 @@ This stack is the Kubernetes-first observability migration target.
 - `kube-prometheus-stack`: Prometheus, Alertmanager, kube-state-metrics, node-exporter, and bundled Grafana.
 - `loki`: single-binary Loki with filesystem-backed persistence for short-retention cluster logs.
 - `promtail`: DaemonSet for Kubernetes/containerd pod logs from `/var/log/pods` and `/var/log/containers`.
-- `unpoller`: existing UniFi metrics exporter, scraped by Prometheus through an additional ServiceMonitor rendered by `kube-prometheus-stack`.
+- `unpoller`: existing UniFi metrics exporter, scraped by Prometheus through an additional ServiceMonitor rendered by `kube-prometheus-stack`. The official UniFi-Poller Prometheus dashboards (grafana.com 11311-11315) are provisioned into the Grafana `UniFi` folder via `grafana.dashboards`.
 
 ## Intentionally deferred
 
