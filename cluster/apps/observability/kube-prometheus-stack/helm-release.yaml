@@ -130,6 +130,9 @@ spec:
           url: http://loki:3100
           jsonData:
             maxLines: 1000
+      # RWO Longhorn PVC: a rolling update deadlocks on Multi-Attach, so recreate.
+      deploymentStrategy:
+        type: Recreate
       persistence:
         enabled: true
         size: 5Gi
